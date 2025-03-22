@@ -5,10 +5,13 @@ import PhoneInput from './PhoneInput';
 
 function App() {
   const [step, setStep] = useState(1);
+  const [phoneError, setPhoneError] = useState(false);
+  const [emailError, setEmailError] = useState(false);
+
   const [formData, setFormData] = useState({
     email: '',
     mobile: { countryCode: '+61', phoneNumber: '' },
-    threeChoice: '',
+    clientOrSP: '',
     currentSystem: '',
     currentChallenges: '',
     dynamicBookingAppeal: 5,
@@ -19,10 +22,34 @@ function App() {
   const totalSteps = 9;
   const nodeRef = useRef(null);
 
-  // Navigation
+  // Validators
+  const validateEmail = (email) => {
+    const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return regex.test(email);
+  };
+
+  // Valid if phone number contains at least 8 digits (ignoring non-digits)
+  const validatePhone = (phoneNumber) => {
+    const digits = phoneNumber.replace(/\D/g, '');
+    return digits.length >= 8;
+  };
+
   const handleNext = () => {
+    if (step === 1) {
+      if (!validateEmail(formData.email)) {
+        setEmailError(true);
+        return;
+      }
+    }
+    if (step === 2) {
+      if (!validatePhone(formData.mobile.phoneNumber)) {
+        setPhoneError(true);
+        return;
+      }
+    }
     if (step < totalSteps) setStep(step + 1);
   };
+
   const handlePrev = () => {
     if (step > 1) setStep(step - 1);
   };
@@ -53,7 +80,7 @@ function App() {
     transition: 'width 0.3s ease'
   };
 
-  // Common styling for step content containers (left-aligned to match progress bar)
+  // Common styling
   const stepContainerStyle = {
     margin: '0 auto',
     maxWidth: '600px',
@@ -76,7 +103,9 @@ function App() {
     marginBottom: '40px'
   };
 
-  // Updated button row style to right-align buttons (flex-end)
+  const errorStyle = { ...inputUnderlineStyle, borderBottomColor: 'red' };
+
+  // Button row style, right-aligned
   const buttonRowStyle = {
     display: 'flex',
     justifyContent: 'flex-end',
@@ -98,21 +127,25 @@ function App() {
       case 1:
         return (
           <div style={stepContainerStyle}>
-            <div style={stepTitleStyle}>1. Please enter your email</div>
+            <div style={stepTitleStyle}>1. Please enter your email *</div>
             <input
               type="email"
               placeholder="your.email@example.com"
               value={formData.email}
-              onChange={(e) =>
-                setFormData({ ...formData, email: e.target.value })
-              }
+              onChange={(e) => {
+                setFormData({ ...formData, email: e.target.value });
+                if (emailError) setEmailError(false);
+              }}
+              onBlur={() => {
+                if (!validateEmail(formData.email)) setEmailError(true);
+              }}
               onKeyDown={handleKeyDown}
-              style={inputUnderlineStyle}
+              style={emailError ? errorStyle : inputUnderlineStyle}
               required
             />
             <div style={buttonRowStyle}>
               <button type="button" onClick={handleNext} style={buttonStyle}>
-                OK
+                Next
               </button>
             </div>
           </div>
@@ -120,14 +153,20 @@ function App() {
       case 2:
         return (
           <div style={stepContainerStyle}>
-            <div style={stepTitleStyle}>2. Please enter your mobile number</div>
+            <div style={stepTitleStyle}>2. Please enter your mobile number *</div>
             <div style={{ marginBottom: '40px' }}>
               <PhoneInput
                 value={formData.mobile}
-                onChange={(newVal) =>
-                  setFormData({ ...formData, mobile: newVal })
-                }
+                onChange={(newVal) => {
+                  setFormData({ ...formData, mobile: newVal });
+                  if (phoneError) setPhoneError(false);
+                }}
                 onKeyDown={handleKeyDown}
+                onBlur={() => {
+                  if (!validatePhone(formData.mobile.phoneNumber))
+                    setPhoneError(true);
+                }}
+                error={phoneError}
               />
             </div>
             <div style={buttonRowStyle}>
@@ -139,7 +178,7 @@ function App() {
                 Previous
               </button>
               <button type="button" onClick={handleNext} style={buttonStyle}>
-                OK
+                Next
               </button>
             </div>
           </div>
@@ -150,19 +189,34 @@ function App() {
             <div style={stepTitleStyle}>
               3. Are you a service provider, a client, or both?
             </div>
-            <select
-              value={formData.threeChoice}
-              onChange={(e) =>
-                setFormData({ ...formData, threeChoice: e.target.value })
-              }
-              onKeyDown={handleKeyDown}
-              style={inputUnderlineStyle}
+            <div
+              style={{
+                marginBottom: '40px',
+                display: 'flex',
+                gap: '8px'
+              }}
             >
-              <option value="">-- Choose an option --</option>
-              <option value="option1">Service Provider</option>
-              <option value="option2">Client</option>
-              <option value="option3">Both</option>
-            </select>
+              {['Service Provider', 'Client', 'Both'].map((option) => (
+                <button
+                  key={option}
+                  type="button"
+                  style={{
+                    backgroundColor:
+                      formData.clientOrSP === option ? '#333' : '#ccc',
+                    color: '#fff',
+                    border: 'none',
+                    padding: '10px 14px',
+                    borderRadius: '4px',
+                    cursor: 'pointer'
+                  }}
+                  onClick={() =>
+                    setFormData({ ...formData, clientOrSP: option })
+                  }
+                >
+                  {option}
+                </button>
+              ))}
+            </div>
             <div style={buttonRowStyle}>
               <button
                 type="button"
@@ -172,7 +226,14 @@ function App() {
                 Previous
               </button>
               <button type="button" onClick={handleNext} style={buttonStyle}>
-                OK
+                Next
+              </button>
+              <button
+                type="button"
+                onClick={() => setStep(9)}
+                style={buttonStyle}
+              >
+                Skip and Submit
               </button>
             </div>
           </div>
@@ -202,7 +263,14 @@ function App() {
                 Previous
               </button>
               <button type="button" onClick={handleNext} style={buttonStyle}>
-                OK
+                Next
+              </button>
+              <button
+                type="button"
+                onClick={() => setStep(9)}
+                style={buttonStyle}
+              >
+                Skip and Submit
               </button>
             </div>
           </div>
@@ -232,7 +300,14 @@ function App() {
                 Previous
               </button>
               <button type="button" onClick={handleNext} style={buttonStyle}>
-                OK
+                Next
+              </button>
+              <button
+                type="button"
+                onClick={() => setStep(9)}
+                style={buttonStyle}
+              >
+                Skip and Submit
               </button>
             </div>
           </div>
@@ -241,16 +316,17 @@ function App() {
         return (
           <div style={stepContainerStyle}>
             <div style={stepTitleStyle}>
-              6. How appealing is a dynamic booking marketplace? (1–10)
+              6. How appealing is a dynamic booking marketplace? (5 = Very Appealing)
             </div>
             <div
               style={{
                 marginBottom: '40px',
                 display: 'flex',
-                gap: '8px'
+                gap: '8px',
+                flexWrap: 'wrap'
               }}
             >
-              {Array.from({ length: 10 }, (_, i) => i + 1).map((val) => (
+              {Array.from({ length: 5 }, (_, i) => i + 1).map((val) => (
                 <button
                   key={val}
                   type="button"
@@ -259,7 +335,7 @@ function App() {
                       formData.dynamicBookingAppeal === val ? '#333' : '#ccc',
                     color: '#fff',
                     border: 'none',
-                    padding: '10px 14px',
+                    padding: '10px 18px',
                     borderRadius: '4px',
                     cursor: 'pointer'
                   }}
@@ -280,7 +356,14 @@ function App() {
                 Previous
               </button>
               <button type="button" onClick={handleNext} style={buttonStyle}>
-                OK
+                Next
+              </button>
+              <button
+                type="button"
+                onClick={() => setStep(9)}
+                style={buttonStyle}
+              >
+                Skip and Submit
               </button>
             </div>
           </div>
@@ -326,7 +409,14 @@ function App() {
                 Previous
               </button>
               <button type="button" onClick={handleNext} style={buttonStyle}>
-                OK
+                Next
+              </button>
+              <button
+                type="button"
+                onClick={() => setStep(9)}
+                style={buttonStyle}
+              >
+                Skip and Submit
               </button>
             </div>
           </div>
@@ -368,14 +458,14 @@ function App() {
             <p>We appreciate your interest and will be in touch soon.</p>
             <div style={{ marginTop: '30px', display: 'flex', justifyContent: 'center', gap: '20px' }}>
               <a
-                href="https://instagram.com/your_page"
+                href="https://instagram.com/joshlukestewart"
                 target="_blank"
                 rel="noopener noreferrer"
               >
                 <img src="/instagram.svg" alt="Instagram" style={{ width: '28px', height: '28px' }} />
               </a>
               <a
-                href="https://linkedin.com/your_page"
+                href="https://linkedin.com/in/joshualukestewart"
                 target="_blank"
                 rel="noopener noreferrer"
               >
@@ -392,7 +482,7 @@ function App() {
   return (
     <div className="main-container" style={{ width: '100%' }}>
       <div className="video-container">
-        <video src="/vertical-video.mp4" autoPlay loop muted />
+        <video src="/vertical-video.mp4" autoPlay loop muted playsInline />
       </div>
       <div className="content-container">
         <Logo />

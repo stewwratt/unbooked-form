@@ -1,4 +1,3 @@
-// PhoneInput.js
 import React from 'react';
 
 const countries = [
@@ -8,9 +7,7 @@ const countries = [
   // Add more as needed
 ];
 
-function PhoneInput({ value, onChange, onKeyDown }) {
-  // value = { countryCode: string, phoneNumber: string }
-
+function PhoneInput({ value, onChange, onKeyDown, onBlur, error }) {
   const handleCountryChange = (e) => {
     onChange({ ...value, countryCode: e.target.value });
   };
@@ -39,17 +36,17 @@ function PhoneInput({ value, onChange, onKeyDown }) {
           </option>
         ))}
       </select>
-
       <input
         type="text"
         value={value.phoneNumber}
         onChange={handleNumberChange}
         onKeyDown={onKeyDown}
+        onBlur={onBlur}
         placeholder="0412 345 678"
         style={{
           fontSize: '1rem',
           border: 'none',
-          borderBottom: '1px solid #aaa',
+          borderBottom: error ? '1px solid red' : '1px solid #aaa',
           outline: 'none',
           background: 'transparent',
           width: '150px'
