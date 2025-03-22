@@ -80,7 +80,7 @@ function App() {
     transition: 'width 0.3s ease'
   };
 
-  // Common styling
+  // Common styling for step content containers
   const stepContainerStyle = {
     margin: '0 auto',
     maxWidth: '600px',
@@ -105,7 +105,7 @@ function App() {
 
   const errorStyle = { ...inputUnderlineStyle, borderBottomColor: 'red' };
 
-  // Button row style, right-aligned
+  // Right-align the button row with a gap
   const buttonRowStyle = {
     display: 'flex',
     justifyContent: 'flex-end',
@@ -316,7 +316,7 @@ function App() {
         return (
           <div style={stepContainerStyle}>
             <div style={stepTitleStyle}>
-              6. How appealing is a dynamic booking marketplace? (5 = Very Appealing)
+              6. How appealing is a dynamic booking marketplace? (1–10)
             </div>
             <div
               style={{
@@ -326,7 +326,7 @@ function App() {
                 flexWrap: 'wrap'
               }}
             >
-              {Array.from({ length: 5 }, (_, i) => i + 1).map((val) => (
+              {Array.from({ length: 10 }, (_, i) => i + 1).map((val) => (
                 <button
                   key={val}
                   type="button"
@@ -335,7 +335,7 @@ function App() {
                       formData.dynamicBookingAppeal === val ? '#333' : '#ccc',
                     color: '#fff',
                     border: 'none',
-                    padding: '10px 18px',
+                    padding: '10px 14px',
                     borderRadius: '4px',
                     cursor: 'pointer'
                   }}
@@ -482,7 +482,7 @@ function App() {
   return (
     <div className="main-container" style={{ width: '100%' }}>
       <div className="video-container">
-        <video src="/vertical-video.mp4" autoPlay loop muted playsInline />
+        <img src="/vertical-video.gif" alt="Vertical Animation" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
       </div>
       <div className="content-container">
         <Logo />
