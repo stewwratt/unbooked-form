@@ -11,3 +11,103 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
 }
+
+/* Transition classes */
+.fade-enter {
+  opacity: 0;
+}
+.fade-enter-active {
+  opacity: 1;
+  transition: opacity 500ms ease-in-out;
+}
+.fade-exit {
+  opacity: 1;
+}
+.fade-exit-active {
+  opacity: 0;
+  transition: opacity 500ms ease-in-out;
+}
+
+/* Layout Styles */
+.main-container {
+  display: flex;
+  min-height: 100vh;
+}
+
+/* index.css */
+
+/* Transition classes for CSSTransition */
+.fade-enter {
+  opacity: 0;
+}
+.fade-enter-active {
+  opacity: 1;
+  transition: opacity 500ms ease-in-out;
+}
+.fade-exit {
+  opacity: 1;
+}
+.fade-exit-active {
+  opacity: 0;
+  transition: opacity 500ms ease-in-out;
+}
+
+/* Layout Styles */
+.main-container {
+  display: flex;
+  min-height: 100vh;
+}
+
+/* Desktop: video on left, content on right */
+@media (min-width: 601px) {
+  .video-container {
+    width: 300px; /* adjust as needed */
+    height: 100vh;
+    overflow: hidden;
+  }
+  .video-container video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .content-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+  }
+}
+
+/* Mobile: stack content, video as footer */
+@media (max-width: 600px) {
+  .main-container {
+    flex-direction: column;
+  }
+  .content-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+  }
+  .video-container {
+    width: 100%;
+    height: 150px; /* adjust as needed */
+    overflow: hidden;
+  }
+  .video-container video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+}
+
+/* Optional: card container styling */
+.card-container {
+  width: 100%;
+  max-width: 600px;
+  text-align: center;
+}
