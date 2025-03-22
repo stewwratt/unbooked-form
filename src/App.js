@@ -65,61 +65,86 @@ function App() {
     }
   };
 
-  const handleSubmit = (e) => {
+  // Updated handleSubmit to post form data to Airtable via proxy
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log('Form submitted:', formData);
-    setStep(9);
+    const payload = {
+      email: formData.email,
+      mobile: formData.mobile,
+      clientOrSP: formData.clientOrSP,
+      currentSystem: formData.currentSystem,
+      currentChallenges: formData.currentChallenges,
+      dynamicBookingAppeal: formData.dynamicBookingAppeal,
+      revenueSharing: formData.revenueSharing,
+      desiredFeatures: formData.desiredFeatures,
+    };
+
+    try {
+      const response = await fetch(
+        "https://airtable-proxy.joshuastewart-2810.workers.dev/api/airtable",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        }
+      );
+      const json = await response.json();
+      console.log("Airtable proxy response:", json);
+      setStep(9);
+    } catch (error) {
+      console.error("Error posting to Airtable via proxy:", error);
+    }
   };
 
   const progress = (step / totalSteps) * 100;
   const progressBarFill = {
     width: `${progress}%`,
-    height: '100%',
-    backgroundColor: '#000',
-    borderRadius: '3px',
-    transition: 'width 0.3s ease'
+    height: "100%",
+    backgroundColor: "#000",
+    borderRadius: "3px",
+    transition: "width 0.3s ease",
   };
 
   // Common styling for step content containers
   const stepContainerStyle = {
-    margin: '0 auto',
-    maxWidth: '600px',
-    textAlign: 'left'
+    margin: "0 auto",
+    maxWidth: "600px",
+    textAlign: "left",
   };
 
   const stepTitleStyle = {
-    fontSize: '1.1rem',
-    fontWeight: 'bold',
-    marginBottom: '30px'
+    fontSize: "1.1rem",
+    fontWeight: "bold",
+    marginBottom: "30px",
   };
 
   const inputUnderlineStyle = {
-    fontSize: '1rem',
-    border: 'none',
-    borderBottom: '1px solid #aaa',
-    outline: 'none',
-    background: 'transparent',
-    width: '100%',
-    marginBottom: '40px'
+    fontSize: "1rem",
+    border: "none",
+    borderBottom: "1px solid #aaa",
+    outline: "none",
+    background: "transparent",
+    width: "100%",
+    marginBottom: "40px",
   };
 
-  const errorStyle = { ...inputUnderlineStyle, borderBottomColor: 'red' };
+  const errorStyle = { ...inputUnderlineStyle, borderBottomColor: "red" };
 
   // Right-align the button row with a gap
   const buttonRowStyle = {
-    display: 'flex',
-    justifyContent: 'flex-end',
-    gap: '15px',
-    marginBottom: '40px'
+    display: "flex",
+    justifyContent: "flex-end",
+    gap: "15px",
+    marginBottom: "40px",
   };
 
   const buttonStyle = {
-    backgroundColor: '#000',
-    color: '#fff',
-    border: 'none',
-    borderRadius: '4px',
-    padding: '10px 16px',
-    cursor: 'pointer'
+    backgroundColor: "#000",
+    color: "#fff",
+    border: "none",
+    borderRadius: "4px",
+    padding: "10px 16px",
+    cursor: "pointer",
   };
 
   const getStepContent = () => {
@@ -153,8 +178,10 @@ function App() {
       case 2:
         return (
           <div style={stepContainerStyle}>
-            <div style={stepTitleStyle}>2. Please enter your mobile number *</div>
-            <div style={{ marginBottom: '40px' }}>
+            <div style={stepTitleStyle}>
+              2. Please enter your mobile number *
+            </div>
+            <div style={{ marginBottom: "40px" }}>
               <PhoneInput
                 value={formData.mobile}
                 onChange={(newVal) => {
@@ -173,7 +200,7 @@ function App() {
               <button
                 type="button"
                 onClick={handlePrev}
-                style={{ ...buttonStyle, backgroundColor: '#888' }}
+                style={{ ...buttonStyle, backgroundColor: "#888" }}
               >
                 Previous
               </button>
@@ -191,23 +218,23 @@ function App() {
             </div>
             <div
               style={{
-                marginBottom: '40px',
-                display: 'flex',
-                gap: '8px'
+                marginBottom: "40px",
+                display: "flex",
+                gap: "8px",
               }}
             >
-              {['Service Provider', 'Client', 'Both'].map((option) => (
+              {["Service Provider", "Client", "Both"].map((option) => (
                 <button
                   key={option}
                   type="button"
                   style={{
                     backgroundColor:
-                      formData.clientOrSP === option ? '#333' : '#ccc',
-                    color: '#fff',
-                    border: 'none',
-                    padding: '10px 14px',
-                    borderRadius: '4px',
-                    cursor: 'pointer'
+                      formData.clientOrSP === option ? "#333" : "#ccc",
+                    color: "#fff",
+                    border: "none",
+                    padding: "10px 14px",
+                    borderRadius: "4px",
+                    cursor: "pointer",
                   }}
                   onClick={() =>
                     setFormData({ ...formData, clientOrSP: option })
@@ -221,7 +248,7 @@ function App() {
               <button
                 type="button"
                 onClick={handlePrev}
-                style={{ ...buttonStyle, backgroundColor: '#888' }}
+                style={{ ...buttonStyle, backgroundColor: "#888" }}
               >
                 Previous
               </button>
@@ -258,7 +285,7 @@ function App() {
               <button
                 type="button"
                 onClick={handlePrev}
-                style={{ ...buttonStyle, backgroundColor: '#888' }}
+                style={{ ...buttonStyle, backgroundColor: "#888" }}
               >
                 Previous
               </button>
@@ -295,7 +322,7 @@ function App() {
               <button
                 type="button"
                 onClick={handlePrev}
-                style={{ ...buttonStyle, backgroundColor: '#888' }}
+                style={{ ...buttonStyle, backgroundColor: "#888" }}
               >
                 Previous
               </button>
@@ -316,28 +343,28 @@ function App() {
         return (
           <div style={stepContainerStyle}>
             <div style={stepTitleStyle}>
-              6. How appealing is a dynamic booking marketplace? (1–10)
+              6. How appealing is a dynamic booking marketplace?
             </div>
             <div
               style={{
-                marginBottom: '40px',
-                display: 'flex',
-                gap: '8px',
-                flexWrap: 'wrap'
+                marginBottom: "40px",
+                display: "flex",
+                gap: "8px",
+                flexWrap: "wrap",
               }}
             >
-              {Array.from({ length: 10 }, (_, i) => i + 1).map((val) => (
+              {Array.from({ length: 5 }, (_, i) => i + 1).map((val) => (
                 <button
                   key={val}
                   type="button"
                   style={{
                     backgroundColor:
-                      formData.dynamicBookingAppeal === val ? '#333' : '#ccc',
-                    color: '#fff',
-                    border: 'none',
-                    padding: '10px 14px',
-                    borderRadius: '4px',
-                    cursor: 'pointer'
+                      formData.dynamicBookingAppeal === val ? "#333" : "#ccc",
+                    color: "#fff",
+                    border: "none",
+                    padding: "10px 20px",
+                    borderRadius: "4px",
+                    cursor: "pointer",
                   }}
                   onClick={() =>
                     setFormData({ ...formData, dynamicBookingAppeal: val })
@@ -351,7 +378,7 @@ function App() {
               <button
                 type="button"
                 onClick={handlePrev}
-                style={{ ...buttonStyle, backgroundColor: '#888' }}
+                style={{ ...buttonStyle, backgroundColor: "#888" }}
               >
                 Previous
               </button>
@@ -374,17 +401,17 @@ function App() {
             <div style={stepTitleStyle}>
               7. Would you be interested in a revenue-sharing model if your slot is resold?
             </div>
-            <div style={{ marginBottom: '40px' }}>
-              <label style={{ marginRight: '20px' }}>
+            <div style={{ marginBottom: "40px" }}>
+              <label style={{ marginRight: "20px" }}>
                 <input
                   type="radio"
                   name="revenueSharing"
                   value="yes"
-                  checked={formData.revenueSharing === 'yes'}
+                  checked={formData.revenueSharing === "yes"}
                   onChange={(e) =>
                     setFormData({ ...formData, revenueSharing: e.target.value })
                   }
-                />{' '}
+                />{" "}
                 Yes
               </label>
               <label>
@@ -392,11 +419,11 @@ function App() {
                   type="radio"
                   name="revenueSharing"
                   value="no"
-                  checked={formData.revenueSharing === 'no'}
+                  checked={formData.revenueSharing === "no"}
                   onChange={(e) =>
                     setFormData({ ...formData, revenueSharing: e.target.value })
                   }
-                />{' '}
+                />{" "}
                 No
               </label>
             </div>
@@ -404,7 +431,7 @@ function App() {
               <button
                 type="button"
                 onClick={handlePrev}
-                style={{ ...buttonStyle, backgroundColor: '#888' }}
+                style={{ ...buttonStyle, backgroundColor: "#888" }}
               >
                 Previous
               </button>
@@ -441,7 +468,7 @@ function App() {
               <button
                 type="button"
                 onClick={handlePrev}
-                style={{ ...buttonStyle, backgroundColor: '#888' }}
+                style={{ ...buttonStyle, backgroundColor: "#888" }}
               >
                 Previous
               </button>
@@ -453,23 +480,38 @@ function App() {
         );
       case 9:
         return (
-          <div style={{ margin: '0 auto', maxWidth: '600px', textAlign: 'center' }}>
+          <div style={{ margin: "0 auto", maxWidth: "600px", textAlign: "center" }}>
             <h2>Thanks for joining the waiting list!</h2>
             <p>We appreciate your interest and will be in touch soon.</p>
-            <div style={{ marginTop: '30px', display: 'flex', justifyContent: 'center', gap: '20px' }}>
+            <div
+              style={{
+                marginTop: "30px",
+                display: "flex",
+                justifyContent: "center",
+                gap: "20px",
+              }}
+            >
               <a
                 href="https://instagram.com/joshlukestewart"
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                <img src="/instagram.svg" alt="Instagram" style={{ width: '28px', height: '28px' }} />
+                <img
+                  src="/instagram.svg"
+                  alt="Instagram"
+                  style={{ width: "28px", height: "28px" }}
+                />
               </a>
               <a
                 href="https://linkedin.com/in/joshualukestewart"
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                <img src="/linkedin.svg" alt="LinkedIn" style={{ width: '28px', height: '28px' }} />
+                <img
+                  src="/linkedin.svg"
+                  alt="LinkedIn"
+                  style={{ width: "28px", height: "28px" }}
+                />
               </a>
             </div>
           </div>
@@ -480,21 +522,25 @@ function App() {
   };
 
   return (
-    <div className="main-container" style={{ width: '100%' }}>
+    <div className="main-container" style={{ width: "100%" }}>
       <div className="video-container">
-        <img src="/vertical-video.gif" alt="Vertical Animation" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        <img
+          src="/vertical-video.gif"
+          alt="Vertical Animation"
+          style={{ width: "100%", height: "100%", objectFit: "cover" }}
+        />
       </div>
       <div className="content-container">
         <Logo />
         <div
           className="progress-bar-container"
           style={{
-            height: '6px',
-            width: '100%',
-            maxWidth: '600px',
-            backgroundColor: '#eee',
-            borderRadius: '3px',
-            marginBottom: '40px'
+            height: "6px",
+            width: "100%",
+            maxWidth: "600px",
+            backgroundColor: "#eee",
+            borderRadius: "3px",
+            marginBottom: "40px",
           }}
         >
           <div style={progressBarFill} />
@@ -508,7 +554,7 @@ function App() {
             unmountOnExit
             mountOnEnter
           >
-            <div ref={nodeRef} className="card-container" style={{ textAlign: 'left' }}>
+            <div ref={nodeRef} className="card-container" style={{ textAlign: "left" }}>
               {step < 9 ? (
                 <form onSubmit={handleSubmit}>{getStepContent()}</form>
               ) : (
