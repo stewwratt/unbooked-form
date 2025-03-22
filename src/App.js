@@ -14,7 +14,7 @@ function App() {
     clientOrSP: '',
     currentSystem: '',
     currentChallenges: '',
-    dynamicBookingAppeal: 5,
+    dynamicBookingAppeal: 99,
     revenueSharing: '',
     desiredFeatures: ''
   });
