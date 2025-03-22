@@ -60,14 +60,13 @@ function App() {
       if (step < 8) {
         handleNext();
       } else if (step === 8) {
-        handleSubmit(e);
+        submitForm();
       }
     }
   };
 
-  // Updated handleSubmit to post form data to Airtable via proxy
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  // New helper function to post data and advance to step 9
+  const submitForm = async () => {
     const payload = {
       email: formData.email,
       mobile: formData.mobile,
@@ -94,6 +93,12 @@ function App() {
     } catch (error) {
       console.error("Error posting to Airtable via proxy:", error);
     }
+  };
+
+  // Update handleSubmit to call submitForm
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    submitForm();
   };
 
   const progress = (step / totalSteps) * 100;
@@ -178,9 +183,7 @@ function App() {
       case 2:
         return (
           <div style={stepContainerStyle}>
-            <div style={stepTitleStyle}>
-              2. Please enter your mobile number *
-            </div>
+            <div style={stepTitleStyle}>2. Please enter your mobile number *</div>
             <div style={{ marginBottom: "40px" }}>
               <PhoneInput
                 value={formData.mobile}
@@ -257,7 +260,7 @@ function App() {
               </button>
               <button
                 type="button"
-                onClick={() => setStep(9)}
+                onClick={submitForm}
                 style={buttonStyle}
               >
                 Skip and Submit
@@ -294,7 +297,7 @@ function App() {
               </button>
               <button
                 type="button"
-                onClick={() => setStep(9)}
+                onClick={submitForm}
                 style={buttonStyle}
               >
                 Skip and Submit
@@ -331,7 +334,7 @@ function App() {
               </button>
               <button
                 type="button"
-                onClick={() => setStep(9)}
+                onClick={submitForm}
                 style={buttonStyle}
               >
                 Skip and Submit
@@ -387,7 +390,7 @@ function App() {
               </button>
               <button
                 type="button"
-                onClick={() => setStep(9)}
+                onClick={submitForm}
                 style={buttonStyle}
               >
                 Skip and Submit
@@ -440,7 +443,7 @@ function App() {
               </button>
               <button
                 type="button"
-                onClick={() => setStep(9)}
+                onClick={submitForm}
                 style={buttonStyle}
               >
                 Skip and Submit
