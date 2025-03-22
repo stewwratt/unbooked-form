@@ -148,7 +148,7 @@ function App() {
         return (
           <div style={stepContainerStyle}>
             <div style={stepTitleStyle}>
-              3. Please enter your mobile number (3 choice answer)
+              3. Are you a service provider, a client, or both?
             </div>
             <select
               value={formData.threeChoice}
@@ -159,9 +159,9 @@ function App() {
               style={inputUnderlineStyle}
             >
               <option value="">-- Choose an option --</option>
-              <option value="option1">Mobile Option 1</option>
-              <option value="option2">Mobile Option 2</option>
-              <option value="option3">Mobile Option 3</option>
+              <option value="option1">Service Provider</option>
+              <option value="option2">Client</option>
+              <option value="option3">Both</option>
             </select>
             <div style={buttonRowStyle}>
               <button
