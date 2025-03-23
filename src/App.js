@@ -80,7 +80,7 @@ function App() {
 
     try {
       const response = await fetch(
-        "https://airtable-proxy.joshuastewart-2810.workers.dev/api/airtable",
+        "https://airtable-proxy.unbooked.me/api/airtable",
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
