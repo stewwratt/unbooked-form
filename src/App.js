@@ -6,7 +6,6 @@ import './FormRedesign.module.css'; // Only for marble background, not for layou
 
 function App() {
   const [step, setStep] = useState(1);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [phoneError, setPhoneError] = useState(false);
   const [emailError, setEmailError] = useState(false);
 
@@ -86,7 +85,7 @@ function App() {
     };
 
     try {
-      const response = await fetch(
+      await fetch(
         "https://airtable-proxy.joshuastewart-2810.workers.dev/api/airtable",
         {
           method: "POST",
@@ -94,7 +93,6 @@ function App() {
           body: JSON.stringify(payload),
         }
       );
-      const json = await response.json();
       // Removed console.log for security
     } catch (error) {
       // Removed console.error for security - consider implementing proper error tracking
@@ -155,7 +153,6 @@ function App() {
 
   // New helper function to post data and show loading indicator
   const submitForm = async () => {
-    setIsSubmitting(true);
     const payload = {
       email: formData.email,
       currentPrice: formData.currentPrice,
@@ -175,7 +172,7 @@ function App() {
     };
 
     try {
-      const response = await fetch(
+      await fetch(
         "https://airtable-proxy.joshuastewart-2810.workers.dev/api/airtable",
         {
           method: "POST",
@@ -183,13 +180,10 @@ function App() {
           body: JSON.stringify(payload),
         }
       );
-      const json = await response.json();
       // Removed console.log for security
-      setIsSubmitting(false);
       setStep(10); // Updated from 9 to 10
     } catch (error) {
       // Removed console.error for security - consider implementing proper error tracking
-      setIsSubmitting(false);
     }
   };
 
