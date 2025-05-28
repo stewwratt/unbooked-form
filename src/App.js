@@ -2,25 +2,52 @@ import React, { useState, useRef } from 'react';
 import { CSSTransition, SwitchTransition } from 'react-transition-group';
 import Logo from './Logo';
 import PhoneInput from './PhoneInput';
+import './FormRedesign.module.css'; // Only for marble background, not for layout
 
 function App() {
   const [step, setStep] = useState(1);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [phoneError, setPhoneError] = useState(false);
   const [emailError, setEmailError] = useState(false);
 
   const [formData, setFormData] = useState({
     email: '',
+    currentPrice: 50, // NEW: Price per service
+    weeklyVolume: 50, // NEW: Clients per week - changed from 20 to 50
+    priceIncrease: 10, // NEW: Price increase amount
+    retention: 90, // NEW: Predicted retention percentage
     mobile: { countryCode: '+61', phoneNumber: '' },
     clientOrSP: '',
     currentSystem: '',
     currentChallenges: '',
-    dynamicBookingAppeal: 0,
+    dynamicBookingAppeal: 5,
     revenueSharing: '',
     desiredFeatures: ''
   });
 
-  const totalSteps = 9;
+  const totalSteps = 10; // Updated from 9 to 10
   const nodeRef = useRef(null);
+
+  // Revenue calculation functions
+  const calculateCurrentAnnual = () => {
+    return formData.currentPrice * formData.weeklyVolume * 52;
+  };
+
+  const calculateNewAnnual = () => {
+    const newPrice = formData.currentPrice + formData.priceIncrease;
+    const retentionDecimal = formData.retention / 100;
+    return newPrice * (formData.weeklyVolume * retentionDecimal) * 52;
+  };
+
+  const calculateUplift = () => {
+    return calculateNewAnnual() - calculateCurrentAnnual();
+  };
+
+  // Retention prediction heuristic
+  const predictRetention = (priceIncrease, currentPrice) => {
+    const increasePercentage = (priceIncrease / currentPrice) * 100;
+    return Math.max(80, 100 - (increasePercentage * 0.6));
+  };
 
   // Validators
   const validateEmail = (email) => {
@@ -34,19 +61,70 @@ function App() {
     return digits.length >= 8;
   };
 
+  // Progressive submission function - posts data after key steps
+  const submitProgressiveData = async (stepCompleted) => {
+    if (!formData.email) return; // Need email as identifier
+
+    const payload = {
+      email: formData.email,
+      stepCompleted: stepCompleted,
+      // Include all current data
+      ...(formData.currentPrice && { currentPrice: formData.currentPrice }),
+      ...(formData.weeklyVolume && { weeklyVolume: formData.weeklyVolume }),
+      ...(formData.priceIncrease && { priceIncrease: formData.priceIncrease }),
+      ...(formData.retention && { retention: formData.retention }),
+      ...(formData.currentPrice && formData.weeklyVolume && {
+        currentAnnual: calculateCurrentAnnual(),
+        newAnnual: calculateNewAnnual(),
+        uplift: calculateUplift()
+      }),
+      ...(formData.mobile.phoneNumber && { mobile: formData.mobile }),
+      ...(formData.clientOrSP && { clientOrSP: formData.clientOrSP }),
+      ...(formData.currentSystem && { currentSystem: formData.currentSystem }),
+      ...(formData.currentChallenges && { currentChallenges: formData.currentChallenges }),
+      timestamp: new Date().toISOString()
+    };
+
+    try {
+      const response = await fetch(
+        "https://airtable-proxy.joshuastewart-2810.workers.dev/api/airtable",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        }
+      );
+      const json = await response.json();
+      // Removed console.log for security
+    } catch (error) {
+      // Removed console.error for security - consider implementing proper error tracking
+    }
+  };
+
   const handleNext = () => {
     if (step === 1) {
       if (!validateEmail(formData.email)) {
         setEmailError(true);
         return;
       }
+      // Submit email immediately after validation
+      submitProgressiveData(1);
     }
-    if (step === 2) {
+    if (step === 6) { // Mobile is now step 6
       if (!validatePhone(formData.mobile.phoneNumber)) {
         setPhoneError(true);
         return;
       }
+      // Submit mobile data
+      submitProgressiveData(6);
     }
+
+    // Submit progressive data for key steps
+    if (step === 2) submitProgressiveData(2); // After price
+    if (step === 3) submitProgressiveData(3); // After volume
+    if (step === 4) submitProgressiveData(4); // After price increase
+    if (step === 5) submitProgressiveData(5); // After results view
+
     if (step < totalSteps) setStep(step + 1);
   };
 
@@ -57,18 +135,36 @@ function App() {
   const handleKeyDown = (e) => {
     if (e.key === 'Enter') {
       e.preventDefault();
-      if (step < 8) {
+      if (step < 9) { // Updated from 8 to 9
         handleNext();
-      } else if (step === 8) {
+      } else if (step === 9) { // Updated from 8 to 9
         submitForm();
       }
     }
   };
 
-  // New helper function to post data and advance to step 9
+  // Update price increase and auto-calculate retention
+  const handlePriceIncreaseChange = (newIncrease) => {
+    const predictedRetention = predictRetention(newIncrease, formData.currentPrice);
+    setFormData({
+      ...formData,
+      priceIncrease: newIncrease,
+      retention: Math.round(predictedRetention)
+    });
+  };
+
+  // New helper function to post data and show loading indicator
   const submitForm = async () => {
+    setIsSubmitting(true);
     const payload = {
       email: formData.email,
+      currentPrice: formData.currentPrice,
+      weeklyVolume: formData.weeklyVolume,
+      priceIncrease: formData.priceIncrease,
+      retention: formData.retention,
+      currentAnnual: calculateCurrentAnnual(),
+      newAnnual: calculateNewAnnual(),
+      uplift: calculateUplift(),
       mobile: formData.mobile,
       clientOrSP: formData.clientOrSP,
       currentSystem: formData.currentSystem,
@@ -80,7 +176,7 @@ function App() {
 
     try {
       const response = await fetch(
-        "https://airtable-proxy.unbooked.me/api/airtable",
+        "https://airtable-proxy.joshuastewart-2810.workers.dev/api/airtable",
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -88,10 +184,12 @@ function App() {
         }
       );
       const json = await response.json();
-      console.log("Airtable proxy response:", json);
-      setStep(9);
+      // Removed console.log for security
+      setIsSubmitting(false);
+      setStep(10); // Updated from 9 to 10
     } catch (error) {
-      console.error("Error posting to Airtable via proxy:", error);
+      // Removed console.error for security - consider implementing proper error tracking
+      setIsSubmitting(false);
     }
   };
 
@@ -152,12 +250,46 @@ function App() {
     cursor: "pointer",
   };
 
+  const sliderStyle = {
+    width: "100%",
+    height: "8px",
+    borderRadius: "4px",
+    background: "#ddd",
+    outline: "none",
+    marginBottom: "20px",
+  };
+
+  // Simple haptic feedback function for mobile devices
+  const triggerHapticFeedback = () => {
+    if (navigator.vibrate) {
+      navigator.vibrate(5); // Very short, subtle vibration
+    }
+  };
+
   const getStepContent = () => {
     switch (step) {
       case 1:
         return (
           <div style={stepContainerStyle}>
-            <div style={stepTitleStyle}>1. Please enter your email *</div>
+            <div style={stepTitleStyle}>Discover Your Revenue Potential</div>
+            <div style={{
+              marginBottom: "25px",
+              fontSize: "0.95rem",
+              color: "#555",
+              lineHeight: "1.6"
+            }}>
+              <p style={{ marginBottom: "15px" }}>
+                <strong>Unbooked</strong> is revolutionising how service providers manage their time and pricing.
+                Our dynamic booking marketplace helps you optimise revenue while reducing no-shows.
+              </p>
+              <p style={{ marginBottom: "20px" }}>
+                But first, let's show you something powerful: <strong>exactly how much extra revenue</strong> you could
+                generate with strategic price increases. Our calculator reveals the financial impact in seconds.
+              </p>
+              <p style={{ marginBottom: "0", fontSize: "0.9rem", color: "#666" }}>
+                Enter your email to access your personalised pricing calculator →
+              </p>
+            </div>
             <input
               type="email"
               placeholder="your.email@example.com"
@@ -175,7 +307,7 @@ function App() {
             />
             <div style={buttonRowStyle}>
               <button type="button" onClick={handleNext} style={buttonStyle}>
-                Next
+                Calculate My Revenue Potential
               </button>
             </div>
           </div>
@@ -183,7 +315,211 @@ function App() {
       case 2:
         return (
           <div style={stepContainerStyle}>
-            <div style={stepTitleStyle}>2. Please enter your mobile number *</div>
+            <div style={stepTitleStyle}>2. How much do you charge on average per service?</div>
+            <div style={{ marginBottom: "20px" }}>
+              <input
+                type="number"
+                placeholder="50"
+                value={formData.currentPrice}
+                onChange={(e) => {
+                  const newPrice = Number(e.target.value);
+                  setFormData({ ...formData, currentPrice: newPrice });
+                  if (newPrice > 0) triggerHapticFeedback(); // Subtle feedback on valid input
+                }}
+                onKeyDown={handleKeyDown}
+                style={{
+                  ...inputUnderlineStyle,
+                  fontSize: "1.2rem",
+                  textAlign: "center",
+                  padding: "12px 0",
+                  transition: "border-bottom-color 0.2s ease"
+                }}
+                min="1"
+                max="1000"
+                onFocus={(e) => e.target.style.borderBottomColor = "#007bff"}
+                onBlur={(e) => e.target.style.borderBottomColor = "#aaa"}
+              />
+              <div style={{ fontSize: "0.9rem", color: "#666", marginTop: "-30px", textAlign: "center" }}>
+                Average price per haircut/service ($)
+              </div>
+            </div>
+            <div style={buttonRowStyle}>
+              <button
+                type="button"
+                onClick={handlePrev}
+                style={{ ...buttonStyle, backgroundColor: "#888" }}
+              >
+                Previous
+              </button>
+              <button type="button" onClick={handleNext} style={buttonStyle}>
+                Next
+              </button>
+            </div>
+          </div>
+        );
+      case 3:
+        return (
+          <div style={stepContainerStyle}>
+            <div style={stepTitleStyle}>3. How many clients on average do you see per week?</div>
+            <div style={{ marginBottom: "20px" }}>
+              <input
+                type="number"
+                placeholder="40"
+                value={formData.weeklyVolume}
+                onChange={(e) => {
+                  const newVolume = Number(e.target.value);
+                  setFormData({ ...formData, weeklyVolume: newVolume });
+                  if (newVolume > 0) triggerHapticFeedback(); // Subtle feedback on valid input
+                }}
+                onKeyDown={handleKeyDown}
+                style={{
+                  ...inputUnderlineStyle,
+                  fontSize: "1.1rem",
+                  textAlign: "center",
+                  padding: "10px 0",
+                  transition: "border-bottom-color 0.2s ease"
+                }}
+                min="1"
+                max="200"
+                onFocus={(e) => e.target.style.borderBottomColor = "#007bff"}
+                onBlur={(e) => e.target.style.borderBottomColor = "#aaa"}
+              />
+              <div style={{ fontSize: "0.9rem", color: "#666", marginTop: "-30px", textAlign: "center" }}>
+                Average number of clients per week
+              </div>
+            </div>
+            <div style={buttonRowStyle}>
+              <button
+                type="button"
+                onClick={handlePrev}
+                style={{ ...buttonStyle, backgroundColor: "#888" }}
+              >
+                Previous
+              </button>
+              <button type="button" onClick={handleNext} style={buttonStyle}>
+                Next
+              </button>
+            </div>
+          </div>
+        );
+      case 4:
+        return (
+          <div style={stepContainerStyle}>
+            <div style={stepTitleStyle}>4. What if you increased your price?</div>
+            <div style={{ marginBottom: "30px" }}>
+              <div style={{ marginBottom: "15px" }}>
+                <strong>Price increase: ${formData.priceIncrease}</strong>
+              </div>
+              <input
+                type="range"
+                min="5"
+                max="50"
+                value={formData.priceIncrease}
+                onChange={(e) => handlePriceIncreaseChange(Number(e.target.value))}
+                style={sliderStyle}
+              />
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8rem", color: "#666" }}>
+                <span>$5</span>
+                <span>$50</span>
+              </div>
+              <div style={{ marginTop: "20px", fontSize: "0.9rem", color: "#666" }}>
+                New price: ${formData.currentPrice + formData.priceIncrease} per service
+              </div>
+            </div>
+            <div style={buttonRowStyle}>
+              <button
+                type="button"
+                onClick={handlePrev}
+                style={{ ...buttonStyle, backgroundColor: "#888" }}
+              >
+                Previous
+              </button>
+              <button type="button" onClick={handleNext} style={buttonStyle}>
+                See Results
+              </button>
+            </div>
+          </div>
+        );
+      case 5:
+        return (
+          <div style={stepContainerStyle}>
+            <div style={stepTitleStyle}>5. Your Revenue Potential</div>
+            <div style={{
+              backgroundColor: "#f8f9fa",
+              padding: "30px",
+              borderRadius: "8px",
+              marginBottom: "30px",
+              border: "1px solid #e9ecef"
+            }}>
+              <div style={{ marginBottom: "20px" }}>
+                <div style={{ fontSize: "0.9rem", color: "#666", marginBottom: "5px" }}>Current Annual Revenue</div>
+                <div style={{ fontSize: "1.8rem", fontWeight: "bold", color: "#333" }}>
+                  ${calculateCurrentAnnual().toLocaleString()}
+                </div>
+              </div>
+              <div style={{ marginBottom: "20px" }}>
+                <div style={{ fontSize: "0.9rem", color: "#666", marginBottom: "5px" }}>Projected Annual Revenue</div>
+                <div style={{ fontSize: "1.8rem", fontWeight: "bold", color: "#28a745" }}>
+                  ${calculateNewAnnual().toLocaleString()}
+                </div>
+              </div>
+              <div style={{ marginBottom: "20px" }}>
+                <div style={{ fontSize: "0.9rem", color: "#666", marginBottom: "5px" }}>Annual Uplift</div>
+                <div style={{ fontSize: "2.2rem", fontWeight: "bold", color: "#007bff" }}>
+                  +${calculateUplift().toLocaleString()}
+                </div>
+                {/* Minimal weekly breakdown */}
+                <div style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  marginTop: "8px",
+                  fontSize: "0.85rem",
+                  color: "#666"
+                }}>
+                  +${Math.round(calculateUplift() / 52).toLocaleString()} per week
+                </div>
+              </div>
+              <div style={{ marginTop: "25px", paddingTop: "20px", borderTop: "1px solid #dee2e6" }}>
+                <div style={{ fontSize: "0.9rem", color: "#666", marginBottom: "10px" }}>
+                  Predicted Client Retention: {formData.retention}%
+                </div>
+                <input
+                  type="range"
+                  min="70"
+                  max="100"
+                  value={formData.retention}
+                  onChange={(e) => setFormData({ ...formData, retention: Number(e.target.value) })}
+                  style={sliderStyle}
+                />
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8rem", color: "#666" }}>
+                  <span>70%</span>
+                  <span>100%</span>
+                </div>
+              </div>
+            </div>
+            <div style={buttonRowStyle}>
+              <button
+                type="button"
+                onClick={handlePrev}
+                style={{ ...buttonStyle, backgroundColor: "#888" }}
+              >
+                Previous
+              </button>
+              <button type="button" onClick={handleNext} style={buttonStyle}>
+                Continue
+              </button>
+            </div>
+          </div>
+        );
+      case 6:
+        return (
+          <div style={stepContainerStyle}>
+            <div style={stepTitleStyle}>6. See if you qualify for an Unbooked pilot program</div>
+            <div style={{ marginBottom: "20px", fontSize: "0.95rem", color: "#555", lineHeight: "1.5" }}>
+              Based on your revenue potential, you may qualify for early access to our pilot program.
+              Enter your mobile number to see if you're eligible for exclusive beta features and priority onboarding.
+            </div>
             <div style={{ marginBottom: "40px" }}>
               <PhoneInput
                 value={formData.mobile}
@@ -208,16 +544,16 @@ function App() {
                 Previous
               </button>
               <button type="button" onClick={handleNext} style={buttonStyle}>
-                Next
+                Check Eligibility
               </button>
             </div>
           </div>
         );
-      case 3:
+      case 7:
         return (
           <div style={stepContainerStyle}>
             <div style={stepTitleStyle}>
-              3. Are you a service provider, a client, or both?
+              7. Are you a service provider, a client, or both?
             </div>
             <div
               style={{
@@ -268,11 +604,11 @@ function App() {
             </div>
           </div>
         );
-      case 4:
+      case 8:
         return (
           <div style={stepContainerStyle}>
             <div style={stepTitleStyle}>
-              4. What system/method do you currently use to book appointments?
+              8. What system/method do you currently use to book appointments?
             </div>
             <input
               type="text"
@@ -305,11 +641,11 @@ function App() {
             </div>
           </div>
         );
-      case 5:
+      case 9:
         return (
           <div style={stepContainerStyle}>
             <div style={stepTitleStyle}>
-              5. What challenges do you face with your current booking process?
+              9. What challenges do you face with your current booking process?
             </div>
             <input
               type="text"
@@ -329,163 +665,31 @@ function App() {
               >
                 Previous
               </button>
-              <button type="button" onClick={handleNext} style={buttonStyle}>
-                Next
-              </button>
-              <button
-                type="button"
-                onClick={submitForm}
-                style={buttonStyle}
-              >
-                Skip and Submit
-              </button>
-            </div>
-          </div>
-        );
-      case 6:
-        return (
-          <div style={stepContainerStyle}>
-            <div style={stepTitleStyle}>
-              6. How appealing is a dynamic booking marketplace?
-            </div>
-            <div
-              style={{
-                marginBottom: "40px",
-                display: "flex",
-                gap: "8px",
-                flexWrap: "wrap",
-              }}
-            >
-              {Array.from({ length: 5 }, (_, i) => i + 1).map((val) => (
-                <button
-                  key={val}
-                  type="button"
-                  style={{
-                    backgroundColor:
-                      formData.dynamicBookingAppeal === val ? "#333" : "#ccc",
-                    color: "#fff",
-                    border: "none",
-                    padding: "10px 20px",
-                    borderRadius: "4px",
-                    cursor: "pointer",
-                  }}
-                  onClick={() =>
-                    setFormData({ ...formData, dynamicBookingAppeal: val })
-                  }
-                >
-                  {val}
-                </button>
-              ))}
-            </div>
-            <div style={buttonRowStyle}>
-              <button
-                type="button"
-                onClick={handlePrev}
-                style={{ ...buttonStyle, backgroundColor: "#888" }}
-              >
-                Previous
-              </button>
-              <button type="button" onClick={handleNext} style={buttonStyle}>
-                Next
-              </button>
-              <button
-                type="button"
-                onClick={submitForm}
-                style={buttonStyle}
-              >
-                Skip and Submit
-              </button>
-            </div>
-          </div>
-        );
-      case 7:
-        return (
-          <div style={stepContainerStyle}>
-            <div style={stepTitleStyle}>
-              7. Would you be interested in a revenue-sharing model if your slot is resold?
-            </div>
-            <div style={{ marginBottom: "40px" }}>
-              <label style={{ marginRight: "20px" }}>
-                <input
-                  type="radio"
-                  name="revenueSharing"
-                  value="yes"
-                  checked={formData.revenueSharing === "yes"}
-                  onChange={(e) =>
-                    setFormData({ ...formData, revenueSharing: e.target.value })
-                  }
-                />{" "}
-                Yes
-              </label>
-              <label>
-                <input
-                  type="radio"
-                  name="revenueSharing"
-                  value="no"
-                  checked={formData.revenueSharing === "no"}
-                  onChange={(e) =>
-                    setFormData({ ...formData, revenueSharing: e.target.value })
-                  }
-                />{" "}
-                No
-              </label>
-            </div>
-            <div style={buttonRowStyle}>
-              <button
-                type="button"
-                onClick={handlePrev}
-                style={{ ...buttonStyle, backgroundColor: "#888" }}
-              >
-                Previous
-              </button>
-              <button type="button" onClick={handleNext} style={buttonStyle}>
-                Next
-              </button>
-              <button
-                type="button"
-                onClick={submitForm}
-                style={buttonStyle}
-              >
-                Skip and Submit
-              </button>
-            </div>
-          </div>
-        );
-      case 8:
-        return (
-          <div style={stepContainerStyle}>
-            <div style={stepTitleStyle}>
-              8. What improvements or features would you like to see?
-            </div>
-            <input
-              type="text"
-              placeholder="Your suggestions"
-              value={formData.desiredFeatures}
-              onChange={(e) =>
-                setFormData({ ...formData, desiredFeatures: e.target.value })
-              }
-              onKeyDown={handleKeyDown}
-              style={inputUnderlineStyle}
-            />
-            <div style={buttonRowStyle}>
-              <button
-                type="button"
-                onClick={handlePrev}
-                style={{ ...buttonStyle, backgroundColor: "#888" }}
-              >
-                Previous
-              </button>
               <button type="submit" style={buttonStyle}>
                 Submit
               </button>
             </div>
           </div>
         );
-      case 9:
+      case 10:
         return (
           <div style={{ margin: "0 auto", maxWidth: "600px", textAlign: "center" }}>
             <h2>Thanks for joining the waiting list!</h2>
             <p>We appreciate your interest and will be in touch soon.</p>
+            <div style={{
+              backgroundColor: "#f8f9fa",
+              padding: "20px",
+              borderRadius: "8px",
+              marginTop: "20px",
+              marginBottom: "30px"
+            }}>
+              <div style={{ fontSize: "0.9rem", color: "#666", marginBottom: "10px" }}>
+                Your potential annual revenue increase:
+              </div>
+              <div style={{ fontSize: "1.5rem", fontWeight: "bold", color: "#007bff" }}>
+                +${calculateUplift().toLocaleString()}
+              </div>
+            </div>
             <div
               style={{
                 marginTop: "30px",
@@ -557,8 +761,8 @@ function App() {
             unmountOnExit
             mountOnEnter
           >
-            <div ref={nodeRef} className="card-container" style={{ textAlign: "left" }}>
-              {step < 9 ? (
+            <div ref={nodeRef} className="card-container marble-panel" style={{ textAlign: "left" }}>
+              {step < 10 ? (
                 <form onSubmit={handleSubmit}>{getStepContent()}</form>
               ) : (
                 getStepContent()
@@ -566,6 +770,49 @@ function App() {
             </div>
           </CSSTransition>
         </SwitchTransition>
+
+        {/* Professional Footer */}
+        <div style={{
+          position: "fixed",
+          bottom: 0,
+          left: 0,
+          right: 0,
+          backgroundColor: "#fff",
+          borderTop: "1px solid #f0f0f0",
+          padding: "16px 0",
+          fontSize: "0.75rem",
+          color: "#888",
+          zIndex: 1000
+        }}>
+          <div style={{
+            maxWidth: "1200px",
+            margin: "0 auto",
+            padding: "0 20px",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center"
+          }}>
+            <div>© 2025 Unbooked</div>
+            <div>
+              Built by{" "}
+              <a
+                href="https://www.joshlukestewart.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  color: "#666",
+                  textDecoration: "none",
+                  borderBottom: "1px solid transparent",
+                  transition: "border-bottom-color 0.2s ease"
+                }}
+                onMouseEnter={(e) => e.target.style.borderBottomColor = "#666"}
+                onMouseLeave={(e) => e.target.style.borderBottomColor = "transparent"}
+              >
+                Josh Stewart
+              </a>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
