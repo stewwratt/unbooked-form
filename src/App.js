@@ -3,17 +3,20 @@ import { CSSTransition, SwitchTransition } from 'react-transition-group';
 import Logo from './Logo';
 import PhoneInput from './PhoneInput';
 import './FormRedesign.module.css'; // Only for marble background, not for layout
+import './App.css'; // For pulse animation
 
 function App() {
   const [step, setStep] = useState(1);
   const [phoneError, setPhoneError] = useState(false);
   const [emailError, setEmailError] = useState(false);
+  const [priceError, setPriceError] = useState(false);
+  const [volumeError, setVolumeError] = useState(false);
 
   const [formData, setFormData] = useState({
     email: '',
-    currentPrice: 50, // NEW: Price per service
-    weeklyVolume: 50, // NEW: Clients per week - changed from 20 to 50
-    priceIncrease: 10, // NEW: Price increase amount
+    currentPrice: '', // Changed from 50 to empty string
+    weeklyVolume: '', // Changed from 50 to empty string
+    priceIncrease: 10, // Keep this as number since it's slider-controlled
     retention: 90, // NEW: Predicted retention percentage
     mobile: { countryCode: '+61', phoneNumber: '' },
     clientOrSP: '',
@@ -29,21 +32,34 @@ function App() {
 
   // Revenue calculation functions
   const calculateCurrentAnnual = () => {
-    return formData.currentPrice * formData.weeklyVolume * 52;
+    const price = parseFloat(formData.currentPrice) || 0;
+    const volume = parseFloat(formData.weeklyVolume) || 0;
+    if (price <= 0 || volume <= 0) return 0;
+    return Math.round(price * volume * 52);
   };
 
   const calculateNewAnnual = () => {
-    const newPrice = formData.currentPrice + formData.priceIncrease;
-    const retentionDecimal = formData.retention / 100;
-    return newPrice * (formData.weeklyVolume * retentionDecimal) * 52;
+    const price = parseFloat(formData.currentPrice) || 0;
+    const volume = parseFloat(formData.weeklyVolume) || 0;
+    const priceIncrease = parseFloat(formData.priceIncrease) || 0;
+    const retention = parseFloat(formData.retention) || 90;
+
+    if (price <= 0 || volume <= 0) return 0;
+
+    const newPrice = price + priceIncrease;
+    const retentionDecimal = retention / 100;
+    return Math.round(newPrice * (volume * retentionDecimal) * 52);
   };
 
   const calculateUplift = () => {
-    return calculateNewAnnual() - calculateCurrentAnnual();
+    const currentAnnual = calculateCurrentAnnual();
+    const newAnnual = calculateNewAnnual();
+    return Math.max(0, newAnnual - currentAnnual);
   };
 
   // Retention prediction heuristic
   const predictRetention = (priceIncrease, currentPrice) => {
+    if (!currentPrice || currentPrice <= 0) return 90; // Default if no price set
     const increasePercentage = (priceIncrease / currentPrice) * 100;
     return Math.max(80, 100 - (increasePercentage * 0.6));
   };
@@ -108,6 +124,27 @@ function App() {
       // Submit email immediately after validation
       submitProgressiveData(1);
     }
+
+    if (step === 2) {
+      const price = parseFloat(formData.currentPrice);
+      if (!price || price <= 0) {
+        setPriceError(true);
+        return;
+      }
+      // Submit price data
+      submitProgressiveData(2);
+    }
+
+    if (step === 3) {
+      const volume = parseFloat(formData.weeklyVolume);
+      if (!volume || volume <= 0) {
+        setVolumeError(true);
+        return;
+      }
+      // Submit volume data
+      submitProgressiveData(3);
+    }
+
     if (step === 6) { // Mobile is now step 6
       if (!validatePhone(formData.mobile.phoneNumber)) {
         setPhoneError(true);
@@ -118,8 +155,6 @@ function App() {
     }
 
     // Submit progressive data for key steps
-    if (step === 2) submitProgressiveData(2); // After price
-    if (step === 3) submitProgressiveData(3); // After volume
     if (step === 4) submitProgressiveData(4); // After price increase
     if (step === 5) submitProgressiveData(5); // After results view
 
@@ -143,7 +178,8 @@ function App() {
 
   // Update price increase and auto-calculate retention
   const handlePriceIncreaseChange = (newIncrease) => {
-    const predictedRetention = predictRetention(newIncrease, formData.currentPrice);
+    const currentPrice = parseFloat(formData.currentPrice) || 0;
+    const predictedRetention = predictRetention(newIncrease, currentPrice);
     setFormData({
       ...formData,
       priceIncrease: newIncrease,
@@ -199,7 +235,7 @@ function App() {
     height: "100%",
     backgroundColor: "#000",
     borderRadius: "3px",
-    transition: "width 0.3s ease",
+    transition: "width 0.6s cubic-bezier(0.4, 0, 0.2, 1)",
   };
 
   // Common styling for step content containers
@@ -207,6 +243,8 @@ function App() {
     margin: "0 auto",
     maxWidth: "600px",
     textAlign: "left",
+    padding: "0 20px",
+    paddingBottom: "100px",
   };
 
   const stepTitleStyle = {
@@ -218,10 +256,12 @@ function App() {
   const inputUnderlineStyle = {
     fontSize: "1rem",
     border: "none",
-    borderBottom: "1px solid #aaa",
+    borderBottom: "2px solid #aaa",
+    borderRadius: "0",
     outline: "none",
     background: "transparent",
     width: "100%",
+    padding: "15px 8px",
     marginBottom: "40px",
   };
 
@@ -232,7 +272,7 @@ function App() {
     display: "flex",
     justifyContent: "flex-end",
     gap: "15px",
-    marginBottom: "40px",
+    marginBottom: "60px",
   };
 
   const buttonStyle = {
@@ -251,7 +291,47 @@ function App() {
     background: "#ddd",
     outline: "none",
     marginBottom: "20px",
+    cursor: "pointer",
+    WebkitAppearance: "none",
+    appearance: "none",
+    position: "relative",
+    // Create larger invisible hit area with pseudo-elements
+    boxSizing: "border-box"
   };
+
+  // Slider thumb styles for blue color
+  const sliderThumbStyle = `
+    input[type="range"]::-webkit-slider-thumb {
+      appearance: none;
+      height: 20px;
+      width: 20px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #5e8bf4, #61baff);
+      cursor: pointer;
+      border: 2px solid #fff;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+    
+    input[type="range"]::-moz-range-thumb {
+      height: 20px;
+      width: 20px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #5e8bf4, #61baff);
+      cursor: pointer;
+      border: 2px solid #fff;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+    
+    /* Larger invisible hit area */
+    input[type="range"]:before {
+      content: '';
+      position: absolute;
+      top: -10px;
+      bottom: -10px;
+      left: 0;
+      right: 0;
+    }
+  `;
 
   // Simple haptic feedback function for mobile devices
   const triggerHapticFeedback = () => {
@@ -265,25 +345,132 @@ function App() {
       case 1:
         return (
           <div style={stepContainerStyle}>
-            <div style={stepTitleStyle}>Discover Your Revenue Potential</div>
+            <div style={{ ...stepTitleStyle, fontSize: "1.4rem", marginBottom: "35px" }}>
+              Discover Your Revenue Potential
+            </div>
+
+            {/* Hero Statement */}
             <div style={{
-              marginBottom: "25px",
-              fontSize: "0.95rem",
-              color: "#555",
-              lineHeight: "1.6"
+              backgroundColor: "#f8f9fa",
+              padding: "25px",
+              borderRadius: "8px",
+              marginBottom: "30px",
+              border: "2px solid #e3f2fd"
             }}>
-              <p style={{ marginBottom: "15px" }}>
-                <strong>Unbooked</strong> is revolutionising how service providers manage their time and pricing.
-                Our dynamic booking marketplace helps you optimise revenue while reducing no-shows.
-              </p>
+              <div style={{
+                fontSize: "1.1rem",
+                fontWeight: "600",
+                color: "#5e8bf4",
+                marginBottom: "15px",
+                textAlign: "center"
+              }}>
+                See exactly how much extra revenue you could generate
+              </div>
+              <div style={{
+                fontSize: "0.95rem",
+                color: "#333",
+                textAlign: "center",
+                lineHeight: "1.5"
+              }}>
+                Our calculator reveals your financial impact in <strong>under 60 seconds</strong>
+              </div>
+            </div>
+
+            {/* Unbooked Philosophy */}
+            <div style={{ marginBottom: "25px", fontSize: "0.95rem", color: "#555", lineHeight: "1.6" }}>
               <p style={{ marginBottom: "20px" }}>
-                But first, let's show you something powerful: <strong>exactly how much extra revenue</strong> you could
-                generate with strategic price increases. Our calculator reveals the financial impact in seconds.
-              </p>
-              <p style={{ marginBottom: "0", fontSize: "0.9rem", color: "#666" }}>
-                Enter your email to access your personalised pricing calculator →
+                <strong>Unbooked's mission:</strong> Help service providers be recognised for what they're worth.
+                We believe your time, expertise, and craft deserve premium pricing and we've built the tools to make that reality.
               </p>
             </div>
+
+            {/* Value Propositions */}
+            <div style={{ marginBottom: "30px" }}>
+              <div style={{
+                display: "grid",
+                gap: "15px",
+                marginBottom: "25px"
+              }}>
+                <div style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "12px",
+                  fontSize: "0.95rem"
+                }}>
+                  <div style={{
+                    width: "6px",
+                    height: "6px",
+                    backgroundColor: "#5e8bf4",
+                    borderRadius: "50%",
+                    flexShrink: 0
+                  }}></div>
+                  <span><strong>Strategic pricing insights</strong> - Find your optimal price point</span>
+                </div>
+                <div style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "12px",
+                  fontSize: "0.95rem"
+                }}>
+                  <div style={{
+                    width: "6px",
+                    height: "6px",
+                    backgroundColor: "#5e8bf4",
+                    borderRadius: "50%",
+                    flexShrink: 0
+                  }}></div>
+                  <span><strong>Revenue projections</strong> - See your annual uplift potential</span>
+                </div>
+                <div style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "12px",
+                  fontSize: "0.95rem"
+                }}>
+                  <div style={{
+                    width: "6px",
+                    height: "6px",
+                    backgroundColor: "#61baff",
+                    borderRadius: "50%",
+                    flexShrink: 0
+                  }}></div>
+                  <span><strong>Pilot program access</strong> - Join our exclusive early adopter community with priority onboarding, advanced features, and direct founder access</span>
+                </div>
+              </div>
+            </div>
+
+            {/* CTA Section */}
+            <div style={{
+              backgroundColor: "#fff",
+              padding: "20px",
+              borderRadius: "6px",
+              marginBottom: "25px",
+              border: "1px solid #ddd",
+              position: "relative",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "10px"
+            }}>
+              {/* Pulsing blue dot */}
+              <div style={{
+                width: "8px",
+                height: "8px",
+                backgroundColor: "#5e8bf4",
+                borderRadius: "50%",
+                animation: "pulse 2s infinite ease-in-out",
+                flexShrink: 0
+              }}></div>
+              <div style={{
+                fontSize: "0.9rem",
+                color: "#333",
+                textAlign: "center",
+                fontWeight: "500"
+              }}>
+                Enter your email to unlock your personalised revenue calculator
+              </div>
+            </div>
+
             <input
               type="email"
               placeholder="your.email@example.com"
@@ -296,11 +483,22 @@ function App() {
                 if (!validateEmail(formData.email)) setEmailError(true);
               }}
               onKeyDown={handleKeyDown}
-              style={emailError ? errorStyle : inputUnderlineStyle}
+              style={{
+                ...(emailError ? errorStyle : inputUnderlineStyle),
+                fontSize: "1.1rem",
+                padding: "18px 10px"
+              }}
               required
             />
             <div style={buttonRowStyle}>
-              <button type="button" onClick={handleNext} style={buttonStyle}>
+              <button type="button" onClick={handleNext} style={{
+                ...buttonStyle,
+                background: "linear-gradient(135deg, #5e8bf4, #61baff)",
+                fontSize: "1rem",
+                fontWeight: "600",
+                padding: "12px 20px",
+                border: "none"
+              }}>
                 Calculate My Revenue Potential
               </button>
             </div>
@@ -313,25 +511,34 @@ function App() {
             <div style={{ marginBottom: "20px" }}>
               <input
                 type="number"
-                placeholder="50"
+                placeholder=""
                 value={formData.currentPrice}
                 onChange={(e) => {
-                  const newPrice = Number(e.target.value);
-                  setFormData({ ...formData, currentPrice: newPrice });
-                  if (newPrice > 0) triggerHapticFeedback(); // Subtle feedback on valid input
+                  const value = e.target.value;
+                  setFormData({ ...formData, currentPrice: value });
+                  if (priceError) setPriceError(false);
+                  if (value && Number(value) > 0) triggerHapticFeedback();
                 }}
                 onKeyDown={handleKeyDown}
                 style={{
                   ...inputUnderlineStyle,
                   fontSize: "1.2rem",
                   textAlign: "center",
-                  padding: "12px 0",
-                  transition: "border-bottom-color 0.2s ease"
+                  padding: "18px 0",
+                  transition: "border-bottom-color 0.2s ease",
+                  borderRadius: "0",
+                  borderBottomColor: priceError ? "red" : "#aaa"
                 }}
                 min="1"
                 max="1000"
-                onFocus={(e) => e.target.style.borderBottomColor = "#007bff"}
-                onBlur={(e) => e.target.style.borderBottomColor = "#aaa"}
+                onFocus={(e) => {
+                  e.target.style.borderBottomColor = priceError ? "red" : "#5e8bf4";
+                  e.target.style.borderRadius = "0";
+                }}
+                onBlur={(e) => {
+                  e.target.style.borderBottomColor = priceError ? "red" : "#aaa";
+                  e.target.style.borderRadius = "0";
+                }}
               />
               <div style={{ fontSize: "0.9rem", color: "#666", marginTop: "-30px", textAlign: "center" }}>
                 Average price per haircut/service ($)
@@ -358,25 +565,34 @@ function App() {
             <div style={{ marginBottom: "20px" }}>
               <input
                 type="number"
-                placeholder="40"
+                placeholder=""
                 value={formData.weeklyVolume}
                 onChange={(e) => {
-                  const newVolume = Number(e.target.value);
-                  setFormData({ ...formData, weeklyVolume: newVolume });
-                  if (newVolume > 0) triggerHapticFeedback(); // Subtle feedback on valid input
+                  const value = e.target.value;
+                  setFormData({ ...formData, weeklyVolume: value });
+                  if (volumeError) setVolumeError(false);
+                  if (value && Number(value) > 0) triggerHapticFeedback();
                 }}
                 onKeyDown={handleKeyDown}
                 style={{
                   ...inputUnderlineStyle,
                   fontSize: "1.1rem",
                   textAlign: "center",
-                  padding: "10px 0",
-                  transition: "border-bottom-color 0.2s ease"
+                  padding: "16px 0",
+                  transition: "border-bottom-color 0.2s ease",
+                  borderRadius: "0",
+                  borderBottomColor: volumeError ? "red" : "#aaa"
                 }}
                 min="1"
                 max="200"
-                onFocus={(e) => e.target.style.borderBottomColor = "#007bff"}
-                onBlur={(e) => e.target.style.borderBottomColor = "#aaa"}
+                onFocus={(e) => {
+                  e.target.style.borderBottomColor = volumeError ? "red" : "#5e8bf4";
+                  e.target.style.borderRadius = "0";
+                }}
+                onBlur={(e) => {
+                  e.target.style.borderBottomColor = volumeError ? "red" : "#aaa";
+                  e.target.style.borderRadius = "0";
+                }}
               />
               <div style={{ fontSize: "0.9rem", color: "#666", marginTop: "-30px", textAlign: "center" }}>
                 Average number of clients per week
@@ -400,24 +616,27 @@ function App() {
         return (
           <div style={stepContainerStyle}>
             <div style={stepTitleStyle}>4. What if you increased your price?</div>
+            <style dangerouslySetInnerHTML={{ __html: sliderThumbStyle }} />
             <div style={{ marginBottom: "30px" }}>
               <div style={{ marginBottom: "15px" }}>
                 <strong>Price increase: ${formData.priceIncrease}</strong>
               </div>
-              <input
-                type="range"
-                min="5"
-                max="50"
-                value={formData.priceIncrease}
-                onChange={(e) => handlePriceIncreaseChange(Number(e.target.value))}
-                style={sliderStyle}
-              />
+              <div style={{ position: "relative", padding: "10px 0" }}>
+                <input
+                  type="range"
+                  min="5"
+                  max="50"
+                  value={formData.priceIncrease}
+                  onChange={(e) => handlePriceIncreaseChange(Number(e.target.value))}
+                  style={sliderStyle}
+                />
+              </div>
               <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8rem", color: "#666" }}>
                 <span>$5</span>
                 <span>$50</span>
               </div>
               <div style={{ marginTop: "20px", fontSize: "0.9rem", color: "#666" }}>
-                New price: ${formData.currentPrice + formData.priceIncrease} per service
+                New price: ${(Number(formData.currentPrice) || 0) + formData.priceIncrease} per service
               </div>
             </div>
             <div style={buttonRowStyle}>
@@ -428,7 +647,11 @@ function App() {
               >
                 Previous
               </button>
-              <button type="button" onClick={handleNext} style={buttonStyle}>
+              <button type="button" onClick={handleNext} style={{
+                ...buttonStyle,
+                background: "linear-gradient(135deg, #5e8bf4, #61baff)",
+                border: "none"
+              }}>
                 See Results
               </button>
             </div>
@@ -438,6 +661,7 @@ function App() {
         return (
           <div style={stepContainerStyle}>
             <div style={stepTitleStyle}>5. Your Revenue Potential</div>
+            <style dangerouslySetInnerHTML={{ __html: sliderThumbStyle }} />
             <div style={{
               backgroundColor: "#f8f9fa",
               padding: "30px",
@@ -478,14 +702,16 @@ function App() {
                 <div style={{ fontSize: "0.9rem", color: "#666", marginBottom: "10px" }}>
                   Predicted Client Retention: {formData.retention}%
                 </div>
-                <input
-                  type="range"
-                  min="70"
-                  max="100"
-                  value={formData.retention}
-                  onChange={(e) => setFormData({ ...formData, retention: Number(e.target.value) })}
-                  style={sliderStyle}
-                />
+                <div style={{ position: "relative", padding: "10px 0" }}>
+                  <input
+                    type="range"
+                    min="70"
+                    max="100"
+                    value={formData.retention}
+                    onChange={(e) => setFormData({ ...formData, retention: Number(e.target.value) })}
+                    style={sliderStyle}
+                  />
+                </div>
                 <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8rem", color: "#666" }}>
                   <span>70%</span>
                   <span>100%</span>
@@ -509,10 +735,20 @@ function App() {
       case 6:
         return (
           <div style={stepContainerStyle}>
-            <div style={stepTitleStyle}>6. See if you qualify for an Unbooked pilot program</div>
+            <div style={stepTitleStyle}>6. See if you qualify for our Unbooked pilot program</div>
             <div style={{ marginBottom: "20px", fontSize: "0.95rem", color: "#555", lineHeight: "1.5" }}>
-              Based on your revenue potential, you may qualify for early access to our pilot program.
-              Enter your mobile number to see if you're eligible for exclusive beta features and priority onboarding.
+              <p style={{ marginBottom: "15px" }}>
+                Based on your revenue potential, you may qualify for early access to our pilot program.
+              </p>
+              <p style={{ marginBottom: "15px" }}>
+                <strong>Unbooked is a revolutionary booking system under active development</strong> designed to help service providers like you be recognised for what you're worth. Our platform uses dynamic pricing, smart scheduling, and client insights to maximise your revenue while reducing no-shows.
+              </p>
+              <p style={{ marginBottom: "15px" }}>
+                <strong>Pilot program includes:</strong> Early access to our booking platform, advanced dynamic pricing tools, priority support, exclusive community access, and direct collaboration with our founding team.
+              </p>
+              <p style={{ marginBottom: "0" }}>
+                Enter your mobile number to check your eligibility and secure your spot in shaping the future of service booking.
+              </p>
             </div>
             <div style={{ marginBottom: "40px" }}>
               <PhoneInput
@@ -537,7 +773,11 @@ function App() {
               >
                 Previous
               </button>
-              <button type="button" onClick={handleNext} style={buttonStyle}>
+              <button type="button" onClick={handleNext} style={{
+                ...buttonStyle,
+                background: "linear-gradient(135deg, #5e8bf4, #61baff)",
+                border: "none"
+              }}>
                 Check Eligibility
               </button>
             </div>
@@ -549,32 +789,68 @@ function App() {
             <div style={stepTitleStyle}>
               7. Are you a service provider, a client, or both?
             </div>
-            <div
-              style={{
-                marginBottom: "40px",
-                display: "flex",
-                gap: "8px",
-              }}
-            >
+            <div style={{ marginBottom: "40px" }}>
               {["Service Provider", "Client", "Both"].map((option) => (
-                <button
+                <div
                   key={option}
-                  type="button"
                   style={{
-                    backgroundColor:
-                      formData.clientOrSP === option ? "#333" : "#ccc",
-                    color: "#fff",
-                    border: "none",
-                    padding: "10px 14px",
-                    borderRadius: "4px",
+                    backgroundColor: formData.clientOrSP === option ? "#f0f7ff" : "#fff",
+                    border: formData.clientOrSP === option ? "2px solid #5e8bf4" : "2px solid #e9ecef",
+                    borderRadius: "8px",
+                    padding: "20px",
+                    marginBottom: "12px",
                     cursor: "pointer",
+                    transition: "all 0.2s ease",
+                    position: "relative",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "15px"
                   }}
-                  onClick={() =>
-                    setFormData({ ...formData, clientOrSP: option })
-                  }
+                  onClick={() => setFormData({ ...formData, clientOrSP: option })}
+                  onMouseEnter={(e) => {
+                    if (formData.clientOrSP !== option) {
+                      e.target.style.borderColor = "#c1d7f0";
+                      e.target.style.backgroundColor = "#fafbfc";
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (formData.clientOrSP !== option) {
+                      e.target.style.borderColor = "#e9ecef";
+                      e.target.style.backgroundColor = "#fff";
+                    }
+                  }}
                 >
-                  {option}
-                </button>
+                  {/* Custom radio button */}
+                  <div style={{
+                    width: "20px",
+                    height: "20px",
+                    borderRadius: "50%",
+                    border: "2px solid " + (formData.clientOrSP === option ? "#5e8bf4" : "#ccc"),
+                    backgroundColor: formData.clientOrSP === option ? "#5e8bf4" : "#fff",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    flexShrink: 0
+                  }}>
+                    {formData.clientOrSP === option && (
+                      <div style={{
+                        width: "8px",
+                        height: "8px",
+                        borderRadius: "50%",
+                        backgroundColor: "#fff"
+                      }}></div>
+                    )}
+                  </div>
+
+                  {/* Option text */}
+                  <div style={{
+                    fontSize: "1rem",
+                    fontWeight: formData.clientOrSP === option ? "600" : "400",
+                    color: formData.clientOrSP === option ? "#333" : "#555"
+                  }}>
+                    {option}
+                  </div>
+                </div>
               ))}
             </div>
             <div style={buttonRowStyle}>
@@ -587,13 +863,6 @@ function App() {
               </button>
               <button type="button" onClick={handleNext} style={buttonStyle}>
                 Next
-              </button>
-              <button
-                type="button"
-                onClick={submitForm}
-                style={buttonStyle}
-              >
-                Skip and Submit
               </button>
             </div>
           </div>
@@ -612,7 +881,11 @@ function App() {
                 setFormData({ ...formData, currentSystem: e.target.value })
               }
               onKeyDown={handleKeyDown}
-              style={inputUnderlineStyle}
+              style={{
+                ...inputUnderlineStyle,
+                fontSize: "1.1rem",
+                padding: "18px 10px"
+              }}
             />
             <div style={buttonRowStyle}>
               <button
@@ -624,13 +897,6 @@ function App() {
               </button>
               <button type="button" onClick={handleNext} style={buttonStyle}>
                 Next
-              </button>
-              <button
-                type="button"
-                onClick={submitForm}
-                style={buttonStyle}
-              >
-                Skip and Submit
               </button>
             </div>
           </div>
@@ -649,7 +915,11 @@ function App() {
                 setFormData({ ...formData, currentChallenges: e.target.value })
               }
               onKeyDown={handleKeyDown}
-              style={inputUnderlineStyle}
+              style={{
+                ...inputUnderlineStyle,
+                fontSize: "1.1rem",
+                padding: "18px 10px"
+              }}
             />
             <div style={buttonRowStyle}>
               <button
@@ -659,7 +929,11 @@ function App() {
               >
                 Previous
               </button>
-              <button type="submit" style={buttonStyle}>
+              <button type="submit" style={{
+                ...buttonStyle,
+                background: "linear-gradient(135deg, #5e8bf4, #61baff)",
+                border: "none"
+              }}>
                 Submit
               </button>
             </div>
@@ -741,7 +1015,7 @@ function App() {
             maxWidth: "600px",
             backgroundColor: "#eee",
             borderRadius: "3px",
-            marginBottom: "40px",
+            marginBottom: "40px"
           }}
         >
           <div style={progressBarFill} />

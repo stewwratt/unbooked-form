@@ -3,7 +3,7 @@ import React from 'react';
 const countries = [
   { code: '+61', name: 'Australia', flag: '🇦🇺' },
   { code: '+44', name: 'United Kingdom', flag: '🇬🇧' },
-  { code: '+1',  name: 'United States',  flag: '🇺🇸' },
+  { code: '+1', name: 'United States', flag: '🇺🇸' },
   // Add more as needed
 ];
 
@@ -17,17 +17,21 @@ function PhoneInput({ value, onChange, onKeyDown, onBlur, error }) {
   };
 
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
       <select
         value={value.countryCode}
         onChange={handleCountryChange}
         style={{
-          fontSize: '1rem',
+          fontSize: '1.1rem',
           border: 'none',
+          borderBottom: '2px solid #aaa',
+          borderRadius: '0',
           background: 'transparent',
           appearance: 'none',
           outline: 'none',
-          cursor: 'pointer'
+          cursor: 'pointer',
+          padding: '18px 8px',
+          minWidth: '80px'
         }}
       >
         {countries.map((c) => (
@@ -44,12 +48,14 @@ function PhoneInput({ value, onChange, onKeyDown, onBlur, error }) {
         onBlur={onBlur}
         placeholder="0412 345 678"
         style={{
-          fontSize: '1rem',
+          fontSize: '1.1rem',
           border: 'none',
-          borderBottom: error ? '1px solid red' : '1px solid #aaa',
+          borderBottom: error ? '2px solid red' : '2px solid #aaa',
+          borderRadius: '0',
           outline: 'none',
           background: 'transparent',
-          width: '150px'
+          flex: '1',
+          padding: '18px 10px'
         }}
       />
     </div>
