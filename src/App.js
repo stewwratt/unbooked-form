@@ -241,10 +241,11 @@ function App() {
   // Common styling for step content containers
   const stepContainerStyle = {
     margin: "0 auto",
+    marginTop: "40px",
     maxWidth: "600px",
     textAlign: "left",
     padding: "0 20px",
-    paddingBottom: "100px",
+    paddingBottom: window.innerWidth <= 768 ? "100px" : "20px",
   };
 
   const stepTitleStyle = {
@@ -1015,7 +1016,8 @@ function App() {
             maxWidth: "600px",
             backgroundColor: "#eee",
             borderRadius: "3px",
-            marginBottom: "40px"
+            marginTop: "30px",
+            marginBottom: "10px"
           }}
         >
           <div style={progressBarFill} />
