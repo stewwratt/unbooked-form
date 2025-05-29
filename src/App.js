@@ -30,21 +30,21 @@ function App() {
   const totalSteps = 10; // Updated from 9 to 10
   const nodeRef = useRef(null);
 
-  // Revenue calculation functions
+  // Revenue calculation functions - make them more reliable
   const calculateCurrentAnnual = () => {
-    const price = parseFloat(formData.currentPrice) || 0;
-    const volume = parseFloat(formData.weeklyVolume) || 0;
-    if (price <= 0 || volume <= 0) return 0;
+    const price = parseFloat(formData.currentPrice);
+    const volume = parseFloat(formData.weeklyVolume);
+    if (!price || !volume || price <= 0 || volume <= 0) return 0;
     return Math.round(price * volume * 52);
   };
 
   const calculateNewAnnual = () => {
-    const price = parseFloat(formData.currentPrice) || 0;
-    const volume = parseFloat(formData.weeklyVolume) || 0;
+    const price = parseFloat(formData.currentPrice);
+    const volume = parseFloat(formData.weeklyVolume);
     const priceIncrease = parseFloat(formData.priceIncrease) || 0;
     const retention = parseFloat(formData.retention) || 90;
 
-    if (price <= 0 || volume <= 0) return 0;
+    if (!price || !volume || price <= 0 || volume <= 0) return 0;
 
     const newPrice = price + priceIncrease;
     const retentionDecimal = retention / 100;
@@ -78,30 +78,73 @@ function App() {
 
   // Progressive submission function - posts data after key steps
   const submitProgressiveData = async (stepCompleted) => {
-    if (!formData.email) return; // Need email as identifier
+    console.log(`=== PROGRESSIVE SUBMISSION - Step ${stepCompleted} ===`);
+
+    if (!formData.email) {
+      console.log('❌ No email found, skipping submission');
+      return; // Need email as identifier
+    }
+
+    console.log('✅ Email found:', formData.email);
+
+    // Calculate values fresh at submission time to ensure accuracy
+    let currentAnnual = 0;
+    let newAnnual = 0;
+    let uplift = 0;
+
+    const price = parseFloat(formData.currentPrice) || 0;
+    const volume = parseFloat(formData.weeklyVolume) || 0;
+    const priceIncrease = parseFloat(formData.priceIncrease) || 0;
+    const retention = parseFloat(formData.retention) || 90;
+
+    if (price > 0 && volume > 0) {
+      currentAnnual = Math.round(price * volume * 52);
+      const newPrice = price + priceIncrease;
+      const retentionDecimal = retention / 100;
+      newAnnual = Math.round(newPrice * (volume * retentionDecimal) * 52);
+      uplift = Math.max(0, newAnnual - currentAnnual);
+    }
 
     const payload = {
       email: formData.email,
       stepCompleted: stepCompleted,
-      // Include all current data
-      ...(formData.currentPrice && { currentPrice: formData.currentPrice }),
-      ...(formData.weeklyVolume && { weeklyVolume: formData.weeklyVolume }),
-      ...(formData.priceIncrease && { priceIncrease: formData.priceIncrease }),
-      ...(formData.retention && { retention: formData.retention }),
-      ...(formData.currentPrice && formData.weeklyVolume && {
-        currentAnnual: calculateCurrentAnnual(),
-        newAnnual: calculateNewAnnual(),
-        uplift: calculateUplift()
-      }),
-      ...(formData.mobile.phoneNumber && { mobile: formData.mobile }),
-      ...(formData.clientOrSP && { clientOrSP: formData.clientOrSP }),
-      ...(formData.currentSystem && { currentSystem: formData.currentSystem }),
-      ...(formData.currentChallenges && { currentChallenges: formData.currentChallenges }),
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      // Convert strings to numbers for Airtable compatibility
+      currentPrice: formData.currentPrice ? parseFloat(formData.currentPrice) : null,
+      weeklyVolume: formData.weeklyVolume ? parseFloat(formData.weeklyVolume) : null,
+      priceIncrease: formData.priceIncrease ? parseFloat(formData.priceIncrease) : null,
+      retention: formData.retention ? parseFloat(formData.retention) : null,
+      // Include calculations only if we have valid data
+      currentAnnual: currentAnnual > 0 ? currentAnnual : null,
+      newAnnual: newAnnual > 0 ? newAnnual : null,
+      uplift: uplift > 0 ? uplift : null,
+      // Include other form data if present
+      mobile: formData.mobile.phoneNumber ? formData.mobile : null,
+      clientOrSP: formData.clientOrSP || null,
+      currentSystem: formData.currentSystem || null,
+      currentChallenges: formData.currentChallenges || null,
+      dynamicBookingAppeal: formData.dynamicBookingAppeal || null,
+      revenueSharing: formData.revenueSharing || null,
+      desiredFeatures: formData.desiredFeatures || null
     };
 
+    console.log('📤 Sending payload:', payload);
+    console.log('🧮 Calculation details:', {
+      currentPrice: parseFloat(formData.currentPrice) || 0,
+      weeklyVolume: parseFloat(formData.weeklyVolume) || 0,
+      priceIncrease: parseFloat(formData.priceIncrease) || 0,
+      retention: parseFloat(formData.retention) || 90,
+      currentAnnual,
+      newAnnual,
+      uplift
+    });
+
+    // Add explicit timing and error handling
+    const startTime = Date.now();
+    console.log('🚀 Starting API call at:', new Date().toISOString());
+
     try {
-      await fetch(
+      const response = await fetch(
         "https://airtable-proxy.joshuastewart-2810.workers.dev/api/airtable",
         {
           method: "POST",
@@ -109,18 +152,55 @@ function App() {
           body: JSON.stringify(payload),
         }
       );
-      // Removed console.log for security
+
+      const endTime = Date.now();
+      console.log(`⏱️ API call completed in ${endTime - startTime}ms`);
+      console.log('📨 Response status:', response.status);
+      console.log('📨 Response headers:', Object.fromEntries(response.headers.entries()));
+
+      let responseData;
+      try {
+        responseData = await response.json();
+        console.log('📨 Response data:', responseData);
+      } catch (jsonError) {
+        console.error('❌ Failed to parse response JSON:', jsonError);
+        const responseText = await response.text();
+        console.log('📄 Raw response text:', responseText);
+      }
+
+      if (!response.ok) {
+        console.error('❌ API call failed:', response.status, response.statusText, responseData);
+      } else {
+        console.log('✅ Progressive submission successful for step', stepCompleted);
+
+        // Check if there were Airtable update issues
+        if (responseData.operation === 'update_failed_but_continuing' ||
+          responseData.operation === 'create_failed_but_continuing') {
+          console.warn('⚠️ Airtable operation failed but continuing:', responseData.operation);
+          console.warn('⚠️ Airtable error details:', responseData.error);
+          console.warn('⚠️ Record ID:', responseData.recordId);
+        }
+      }
     } catch (error) {
-      // Removed console.error for security - consider implementing proper error tracking
+      const endTime = Date.now();
+      console.error(`❌ Progressive submission error after ${endTime - startTime}ms:`, error);
+      console.error('❌ Error details:', {
+        name: error.name,
+        message: error.message,
+        stack: error.stack
+      });
     }
   };
 
   const handleNext = () => {
+    console.log(`=== HANDLE NEXT - Step ${step} ===`); // Debug log
+
     if (step === 1) {
       if (!validateEmail(formData.email)) {
         setEmailError(true);
         return;
       }
+      console.log('Step 1: Email validated, submitting progressive data'); // Debug
       // Submit email immediately after validation
       submitProgressiveData(1);
     }
@@ -131,6 +211,7 @@ function App() {
         setPriceError(true);
         return;
       }
+      console.log('Step 2: Price validated, submitting progressive data'); // Debug
       // Submit price data
       submitProgressiveData(2);
     }
@@ -141,8 +222,19 @@ function App() {
         setVolumeError(true);
         return;
       }
+      console.log('Step 3: Volume validated, submitting progressive data'); // Debug
       // Submit volume data
       submitProgressiveData(3);
+    }
+
+    if (step === 4) {
+      console.log('Step 4: Submitting price increase data'); // Debug
+      submitProgressiveData(4); // After price increase
+    }
+
+    if (step === 5) {
+      console.log('Step 5: Submitting results data'); // Debug
+      submitProgressiveData(5); // After results view
     }
 
     if (step === 6) { // Mobile is now step 6
@@ -150,14 +242,22 @@ function App() {
         setPhoneError(true);
         return;
       }
+      console.log('Step 6: Phone validated, submitting progressive data'); // Debug
       // Submit mobile data
       submitProgressiveData(6);
     }
 
-    // Submit progressive data for key steps
-    if (step === 4) submitProgressiveData(4); // After price increase
-    if (step === 5) submitProgressiveData(5); // After results view
+    if (step === 7) {
+      console.log('Step 7: Submitting client/SP data'); // Debug
+      submitProgressiveData(7);
+    }
 
+    if (step === 8) {
+      console.log('Step 8: Submitting current system data'); // Debug
+      submitProgressiveData(8);
+    }
+
+    console.log(`Advancing from step ${step} to ${step + 1}`); // Debug
     if (step < totalSteps) setStep(step + 1);
   };
 
@@ -176,28 +276,48 @@ function App() {
     }
   };
 
-  // Update price increase and auto-calculate retention
+  // Update price increase and auto-calculate retention - force re-render
   const handlePriceIncreaseChange = (newIncrease) => {
     const currentPrice = parseFloat(formData.currentPrice) || 0;
     const predictedRetention = predictRetention(newIncrease, currentPrice);
-    setFormData({
-      ...formData,
+    setFormData(prevData => ({
+      ...prevData,
       priceIncrease: newIncrease,
       retention: Math.round(predictedRetention)
-    });
+    }));
   };
 
   // New helper function to post data and show loading indicator
   const submitForm = async () => {
+    // Recalculate all values fresh at final submission
+    const price = parseFloat(formData.currentPrice) || 0;
+    const volume = parseFloat(formData.weeklyVolume) || 0;
+    const priceIncrease = parseFloat(formData.priceIncrease) || 0;
+    const retention = parseFloat(formData.retention) || 90;
+
+    let currentAnnual = 0;
+    let newAnnual = 0;
+    let uplift = 0;
+
+    if (price > 0 && volume > 0) {
+      currentAnnual = Math.round(price * volume * 52);
+      const newPrice = price + priceIncrease;
+      const retentionDecimal = retention / 100;
+      newAnnual = Math.round(newPrice * (volume * retentionDecimal) * 52);
+      uplift = Math.max(0, newAnnual - currentAnnual);
+    }
+
     const payload = {
       email: formData.email,
+      stepCompleted: 'final',
+      timestamp: new Date().toISOString(),
       currentPrice: formData.currentPrice,
       weeklyVolume: formData.weeklyVolume,
       priceIncrease: formData.priceIncrease,
       retention: formData.retention,
-      currentAnnual: calculateCurrentAnnual(),
-      newAnnual: calculateNewAnnual(),
-      uplift: calculateUplift(),
+      currentAnnual: currentAnnual,
+      newAnnual: newAnnual,
+      uplift: uplift,
       mobile: formData.mobile,
       clientOrSP: formData.clientOrSP,
       currentSystem: formData.currentSystem,
@@ -208,6 +328,16 @@ function App() {
     };
 
     try {
+      console.log('Submitting final form data:', payload); // Temporary for debugging
+      console.log('Final calculation details:', {
+        price,
+        volume,
+        priceIncrease,
+        retention,
+        currentAnnual,
+        newAnnual,
+        uplift
+      }); // Additional debugging
       await fetch(
         "https://airtable-proxy.joshuastewart-2810.workers.dev/api/airtable",
         {
@@ -216,10 +346,9 @@ function App() {
           body: JSON.stringify(payload),
         }
       );
-      // Removed console.log for security
-      setStep(10); // Updated from 9 to 10
+      setStep(10);
     } catch (error) {
-      // Removed console.error for security - consider implementing proper error tracking
+      console.error('Final submission error:', error); // Temporary for debugging
     }
   };
 
@@ -487,7 +616,9 @@ function App() {
               style={{
                 ...(emailError ? errorStyle : inputUnderlineStyle),
                 fontSize: "1.1rem",
-                padding: "18px 10px"
+                padding: "18px 0px",
+                maxWidth: "100%",
+                width: "100%"
               }}
               required
             />
@@ -709,7 +840,10 @@ function App() {
                     min="70"
                     max="100"
                     value={formData.retention}
-                    onChange={(e) => setFormData({ ...formData, retention: Number(e.target.value) })}
+                    onChange={(e) => setFormData(prevData => ({
+                      ...prevData,
+                      retention: Number(e.target.value)
+                    }))}
                     style={sliderStyle}
                   />
                 </div>
