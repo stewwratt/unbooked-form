@@ -78,14 +78,14 @@ function App() {
 
   // Progressive submission function - posts data after key steps
   const submitProgressiveData = async (stepCompleted) => {
-    console.log(`=== PROGRESSIVE SUBMISSION - Step ${stepCompleted} ===`);
+    // console.log(`=== PROGRESSIVE SUBMISSION - Step ${stepCompleted} ===`);
 
     if (!formData.email) {
-      console.log('❌ No email found, skipping submission');
+      // console.log('❌ No email found, skipping submission');
       return; // Need email as identifier
     }
 
-    console.log('✅ Email found:', formData.email);
+    // console.log('✅ Email found:', formData.email);
 
     // Calculate values fresh at submission time to ensure accuracy
     let currentAnnual = 0;
@@ -128,20 +128,20 @@ function App() {
       desiredFeatures: formData.desiredFeatures || null
     };
 
-    console.log('📤 Sending payload:', payload);
-    console.log('🧮 Calculation details:', {
-      currentPrice: parseFloat(formData.currentPrice) || 0,
-      weeklyVolume: parseFloat(formData.weeklyVolume) || 0,
-      priceIncrease: parseFloat(formData.priceIncrease) || 0,
-      retention: parseFloat(formData.retention) || 90,
-      currentAnnual,
-      newAnnual,
-      uplift
-    });
+    // console.log('📤 Sending payload:', payload);
+    // console.log('🧮 Calculation details:', {
+    //   currentPrice: parseFloat(formData.currentPrice) || 0,
+    //   weeklyVolume: parseFloat(formData.weeklyVolume) || 0,
+    //   priceIncrease: parseFloat(formData.priceIncrease) || 0,
+    //   retention: parseFloat(formData.retention) || 90,
+    //   currentAnnual,
+    //   newAnnual,
+    //   uplift 
+    // });
 
     // Add explicit timing and error handling
     const startTime = Date.now();
-    console.log('🚀 Starting API call at:', new Date().toISOString());
+    // console.log('🚀 Starting API call at:', new Date().toISOString());
 
     try {
       const response = await fetch(
@@ -154,53 +154,53 @@ function App() {
       );
 
       const endTime = Date.now();
-      console.log(`⏱️ API call completed in ${endTime - startTime}ms`);
-      console.log('📨 Response status:', response.status);
-      console.log('📨 Response headers:', Object.fromEntries(response.headers.entries()));
+      // console.log(`⏱️ API call completed in ${endTime - startTime}ms`);
+      // console.log('📨 Response status:', response.status);
+      // console.log('📨 Response headers:', Object.fromEntries(response.headers.entries()));
 
       let responseData;
       try {
         responseData = await response.json();
-        console.log('📨 Response data:', responseData);
+        // console.log('📨 Response data:', responseData);
       } catch (jsonError) {
-        console.error('❌ Failed to parse response JSON:', jsonError);
+        // console.error('❌ Failed to parse response JSON:', jsonError);
         const responseText = await response.text();
-        console.log('📄 Raw response text:', responseText);
+        // console.log('📄 Raw response text:', responseText);
       }
 
       if (!response.ok) {
-        console.error('❌ API call failed:', response.status, response.statusText, responseData);
+        // console.error('❌ API call failed:', response.status, response.statusText, responseData);
       } else {
-        console.log('✅ Progressive submission successful for step', stepCompleted);
+        // console.log('✅ Progressive submission successful for step', stepCompleted);
 
         // Check if there were Airtable update issues
         if (responseData.operation === 'update_failed_but_continuing' ||
           responseData.operation === 'create_failed_but_continuing') {
-          console.warn('⚠️ Airtable operation failed but continuing:', responseData.operation);
-          console.warn('⚠️ Airtable error details:', responseData.error);
-          console.warn('⚠️ Record ID:', responseData.recordId);
+          // console.warn('⚠️ Airtable operation failed but continuing:', responseData.operation);
+          // console.warn('⚠️ Airtable error details:', responseData.error);
+          // console.warn('⚠️ Record ID:', responseData.recordId);
         }
       }
     } catch (error) {
       const endTime = Date.now();
-      console.error(`❌ Progressive submission error after ${endTime - startTime}ms:`, error);
-      console.error('❌ Error details:', {
-        name: error.name,
-        message: error.message,
-        stack: error.stack
-      });
+      // console.error(`❌ Progressive submission error after ${endTime - startTime}ms:`, error);
+      // console.error('❌ Error details:', {
+      //   name: error.name,
+      //   message: error.message,
+      //   stack: error.stack
+      // });
     }
   };
 
   const handleNext = () => {
-    console.log(`=== HANDLE NEXT - Step ${step} ===`); // Debug log
+    // console.log(`=== HANDLE NEXT - Step ${step} ===`); // Debug log
 
     if (step === 1) {
       if (!validateEmail(formData.email)) {
         setEmailError(true);
         return;
       }
-      console.log('Step 1: Email validated, submitting progressive data'); // Debug
+      // console.log('Step 1: Email validated, submitting progressive data'); // Debug
       // Submit email immediately after validation
       submitProgressiveData(1);
     }
@@ -211,7 +211,7 @@ function App() {
         setPriceError(true);
         return;
       }
-      console.log('Step 2: Price validated, submitting progressive data'); // Debug
+      // console.log('Step 2: Price validated, submitting progressive data'); // Debug
       // Submit price data
       submitProgressiveData(2);
     }
@@ -222,18 +222,18 @@ function App() {
         setVolumeError(true);
         return;
       }
-      console.log('Step 3: Volume validated, submitting progressive data'); // Debug
+      // console.log('Step 3: Volume validated, submitting progressive data'); // Debug
       // Submit volume data
       submitProgressiveData(3);
     }
 
     if (step === 4) {
-      console.log('Step 4: Submitting price increase data'); // Debug
+      // console.log('Step 4: Submitting price increase data'); // Debug
       submitProgressiveData(4); // After price increase
     }
 
     if (step === 5) {
-      console.log('Step 5: Submitting results data'); // Debug
+      // console.log('Step 5: Submitting results data'); // Debug
       submitProgressiveData(5); // After results view
     }
 
@@ -242,22 +242,22 @@ function App() {
         setPhoneError(true);
         return;
       }
-      console.log('Step 6: Phone validated, submitting progressive data'); // Debug
+      // console.log('Step 6: Phone validated, submitting progressive data'); // Debug
       // Submit mobile data
       submitProgressiveData(6);
     }
 
     if (step === 7) {
-      console.log('Step 7: Submitting client/SP data'); // Debug
+      // console.log('Step 7: Submitting client/SP data'); // Debug
       submitProgressiveData(7);
     }
 
     if (step === 8) {
-      console.log('Step 8: Submitting current system data'); // Debug
+      // console.log('Step 8: Submitting current system data'); // Debug
       submitProgressiveData(8);
     }
 
-    console.log(`Advancing from step ${step} to ${step + 1}`); // Debug
+    // console.log(`Advancing from step ${step} to ${step + 1}`); // Debug
     if (step < totalSteps) setStep(step + 1);
   };
 
@@ -328,16 +328,16 @@ function App() {
     };
 
     try {
-      console.log('Submitting final form data:', payload); // Temporary for debugging
-      console.log('Final calculation details:', {
-        price,
-        volume,
-        priceIncrease,
-        retention,
-        currentAnnual,
-        newAnnual,
-        uplift
-      }); // Additional debugging
+      // console.log('Submitting final form data:', payload); // Temporary for debugging
+      // console.log('Final calculation details:', { 
+      //   price, 
+      //   volume, 
+      //   priceIncrease, 
+      //   retention, 
+      //   currentAnnual, 
+      //   newAnnual, 
+      //   uplift 
+      // }); // Additional debugging
       await fetch(
         "https://airtable-proxy.joshuastewart-2810.workers.dev/api/airtable",
         {
@@ -348,7 +348,7 @@ function App() {
       );
       setStep(10);
     } catch (error) {
-      console.error('Final submission error:', error); // Temporary for debugging
+      // console.error('Final submission error:', error); // Temporary for debugging
     }
   };
 
