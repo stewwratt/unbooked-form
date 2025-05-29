@@ -140,7 +140,7 @@ function App() {
     // });
 
     // Add explicit timing and error handling
-    const startTime = Date.now();
+    // const startTime = Date.now();
     // console.log('🚀 Starting API call at:', new Date().toISOString());
 
     try {
@@ -153,7 +153,7 @@ function App() {
         }
       );
 
-      const endTime = Date.now();
+      // const endTime = Date.now();
       // console.log(`⏱️ API call completed in ${endTime - startTime}ms`);
       // console.log('📨 Response status:', response.status);
       // console.log('📨 Response headers:', Object.fromEntries(response.headers.entries()));
@@ -164,7 +164,7 @@ function App() {
         // console.log('📨 Response data:', responseData);
       } catch (jsonError) {
         // console.error('❌ Failed to parse response JSON:', jsonError);
-        const responseText = await response.text();
+        // const responseText = await response.text();
         // console.log('📄 Raw response text:', responseText);
       }
 
@@ -182,7 +182,7 @@ function App() {
         }
       }
     } catch (error) {
-      const endTime = Date.now();
+      // const endTime = Date.now();
       // console.error(`❌ Progressive submission error after ${endTime - startTime}ms:`, error);
       // console.error('❌ Error details:', {
       //   name: error.name,
