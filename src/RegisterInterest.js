@@ -64,11 +64,12 @@ function RegisterInterest() {
       email: email,
       source: "register-interest",
       timestamp: new Date().toISOString(),
-      stepCompleted: "interest-registered",
     };
 
     try {
-      await fetch(
+      console.log("🚀 Submitting to Airtable:", payload);
+
+      const response = await fetch(
         "https://airtable-proxy.joshuastewart-2810.workers.dev/api/airtable",
         {
           method: "POST",
@@ -76,9 +77,24 @@ function RegisterInterest() {
           body: JSON.stringify(payload),
         }
       );
+
+      console.log("📡 Response status:", response.status);
+
+      if (response.ok) {
+        const responseData = await response.json();
+        console.log("✅ Airtable submission successful:", responseData);
+      } else {
+        const errorData = await response.text();
+        console.error(
+          "❌ Airtable submission failed:",
+          response.status,
+          errorData
+        );
+      }
+
       setIsSubmitted(true);
     } catch (error) {
-      console.error("Submission error:", error);
+      console.error("❌ Network/Submission error:", error);
       // Still show success to user - best UX practice
       setIsSubmitted(true);
     } finally {
