@@ -88,7 +88,10 @@ function RegisterInterest() {
 
   if (isSubmitted) {
     return (
-      <div className="main-container" style={{ width: "100%" }}>
+      <div
+        className="main-container"
+        style={{ width: "100%", overflowX: "hidden" }}
+      >
         <div className="video-container">
           <img
             src="/vertical-video.gif"
@@ -318,7 +321,10 @@ function RegisterInterest() {
   }
 
   return (
-    <div className="main-container" style={{ width: "100%" }}>
+    <div
+      className="main-container"
+      style={{ width: "100%", overflowX: "hidden" }}
+    >
       <div className="video-container">
         <img
           src="/vertical-video.gif"
@@ -335,6 +341,8 @@ function RegisterInterest() {
             margin: "20px auto",
             padding: "0 16px",
             paddingBottom: "20px",
+            width: "100%",
+            boxSizing: "border-box",
           }}
         >
           {/* Hero Section */}
@@ -387,12 +395,102 @@ function RegisterInterest() {
                 display: "inline-block",
                 fontSize: "0.875rem",
                 fontWeight: "500",
-                marginBottom: "40px",
+                marginBottom: "24px",
                 border: "1px solid #e5e7eb",
               }}
             >
               Early Access Coming Soon, Register for Updates
             </div>
+
+            {/* Early Email Capture */}
+            <form
+              onSubmit={handleSubmit}
+              style={{
+                maxWidth: "350px",
+                margin: "0 auto 40px",
+                padding: "0 16px",
+              }}
+            >
+              <input
+                type="email"
+                placeholder="your.email@example.com"
+                value={email}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  if (emailError) setEmailError(false);
+                }}
+                style={{
+                  width: "100%",
+                  padding: "12px 16px",
+                  fontSize: "clamp(0.9rem, 2.5vw, 1rem)",
+                  border: emailError
+                    ? "2px solid #dc2626"
+                    : "2px solid #e5e7eb",
+                  borderRadius: "8px",
+                  marginBottom: "12px",
+                  outline: "none",
+                  transition: "border-color 0.2s ease",
+                  boxSizing: "border-box",
+                }}
+                onFocus={(e) => {
+                  if (!emailError) e.target.style.borderColor = "#5e8bf4";
+                }}
+                onBlur={(e) => {
+                  if (!emailError) e.target.style.borderColor = "#e5e7eb";
+                }}
+                required
+              />
+
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                style={{
+                  width: "100%",
+                  padding: "12px 16px",
+                  fontSize: "clamp(0.9rem, 2.5vw, 1rem)",
+                  fontWeight: "600",
+                  background: isSubmitting
+                    ? "#94a3b8"
+                    : "linear-gradient(135deg, #5e8bf4, #61baff)",
+                  color: "white",
+                  border: "none",
+                  borderRadius: "8px",
+                  cursor: isSubmitting ? "not-allowed" : "pointer",
+                  transition: "all 0.2s ease",
+                  transform: isSubmitting ? "none" : "translateY(0)",
+                  boxSizing: "border-box",
+                }}
+                onMouseEnter={(e) => {
+                  if (!isSubmitting) {
+                    e.target.style.transform = "translateY(-1px)";
+                    e.target.style.boxShadow =
+                      "0 4px 12px rgba(94, 139, 244, 0.3)";
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!isSubmitting) {
+                    e.target.style.transform = "translateY(0)";
+                    e.target.style.boxShadow = "none";
+                  }
+                }}
+              >
+                {isSubmitting ? "Submitting..." : "Submit"}
+              </button>
+            </form>
+
+            {emailError && (
+              <p
+                style={{
+                  color: "#dc2626",
+                  fontSize: "clamp(0.85rem, 2.2vw, 0.9rem)",
+                  marginTop: "-30px",
+                  marginBottom: "20px",
+                  textAlign: "center",
+                }}
+              >
+                Please enter a valid email address
+              </p>
+            )}
           </div>
 
           {/* The Problem Section */}
@@ -441,6 +539,8 @@ function RegisterInterest() {
                 gridTemplateColumns: "1fr",
                 gap: "16px",
                 marginTop: "24px",
+                width: "100%",
+                boxSizing: "border-box",
               }}
             >
               {/* Traditional Booking */}
@@ -925,7 +1025,7 @@ function RegisterInterest() {
                   }
                 }}
               >
-                {isSubmitting ? "Joining..." : "Get Early Access"}
+                {isSubmitting ? "Submitting..." : "Submit"}
               </button>
             </form>
 
