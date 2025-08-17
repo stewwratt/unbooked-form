@@ -1,4 +1,11 @@
-# Getting Started with Create React App
+# Unbooked Form Application
+
+This is the Unbooked form application with revenue calculator and interest registration functionality.
+
+## Routes
+
+- `/` - Main revenue calculator form (10-step process)
+- `/register-interest` - Hair event lead capture page with Unbooked marketplace explanation
 
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 

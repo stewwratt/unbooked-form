@@ -1,0 +1,80 @@
+---
+description: UI/UX Standards - Design system compliance and user experience guidelines
+globs:
+  ["**/components/**", "**/app/**", "**/*.tsx", "**/*style*", "**/*design*"]
+alwaysApply: true
+---
+
+# 🎨 UI/UX STANDARDS
+
+## Design System Compliance
+
+**MANDATORY**: All UI work must:
+
+### Visual Standards:
+
+- **Follow patterns** documented in `09_STYLE_GUIDE.md`
+- **Use established color schemes** and typography
+- **Implement responsive design** with mobile-first approach
+- **Include proper loading states** and error handling
+
+### Component Guidelines:
+
+- **Consistent spacing** using Tailwind scale
+- **Proper semantic HTML** for accessibility
+- **Focus management** for keyboard navigation
+- **ARIA labels** for screen readers
+
+### Responsive Design:
+
+- **Mobile-first approach** (min-width breakpoints)
+- **Touch-friendly interactions** (44px minimum touch targets)
+- **Flexible layouts** that work on all screen sizes
+- **Performance optimization** for mobile devices
+
+## User Flow Validation
+
+### User Journey Requirements:
+
+- **Reference `02_USER_FLOWS.md`** for user journey requirements
+- **Ensure new features align** with documented flows
+- **Update user flows** when implementing new features
+- **Validate UX** against business goals in project specification
+
+### Interaction Patterns:
+
+- **Consistent navigation** patterns
+- **Clear call-to-action** buttons
+- **Intuitive form interactions**
+- **Meaningful error messages**
+
+## Professional Dashboard Standards
+
+### Calendar Management:
+
+- **Multi-view support** (3-day, week, month)
+- **Location-based filtering** with security constraints
+- **Real-time updates** without page refresh
+- **Booking creation** with 4-step workflow
+
+### Analytics Display:
+
+- **Clear data visualization**
+- **Performance metrics** with context
+- **Revenue tracking** and projections
+- **Client insights** and trends
+
+### Loading & Error States:
+
+- **Skeleton loaders** for content areas
+- **Loading spinners** for actions
+- **Error boundaries** for component failures
+- **Retry mechanisms** for failed operations
+
+@memory-bank/02_USER_FLOWS.md
+@memory-bank/09_STYLE_GUIDE.md
+description:
+globs:
+alwaysApply: false
+
+---
