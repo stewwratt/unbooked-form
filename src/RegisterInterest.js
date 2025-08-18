@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import Logo from "./Logo";
+import { FullPageLogoLoader } from "./LogoLoading";
 import "./App.css";
 
 function RegisterInterest() {
@@ -7,6 +8,7 @@ function RegisterInterest() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [emailError, setEmailError] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   // Refs for scroll animations
   const heroRef = useRef(null);
@@ -15,39 +17,91 @@ function RegisterInterest() {
   const exampleRef = useRef(null);
   const ctaRef = useRef(null);
 
-  // Intersection Observer for smooth animations
+  // Loading effect for network resources
   useEffect(() => {
-    const observerOptions = {
-      threshold: 0.1,
-      rootMargin: "0px 0px -50px 0px",
+    const loadResources = async () => {
+      try {
+        // Wait for page to load
+        if (document.readyState === "complete") {
+          // Add a minimum loading time to show the logo
+          await new Promise((resolve) => setTimeout(resolve, 1500));
+          setIsLoading(false);
+        } else {
+          // Wait for window load event
+          const handleLoad = async () => {
+            await new Promise((resolve) => setTimeout(resolve, 1500));
+            setIsLoading(false);
+          };
+          window.addEventListener("load", handleLoad);
+          return () => window.removeEventListener("load", handleLoad);
+        }
+      } catch (error) {
+        console.error("Error loading resources:", error);
+        // Still hide loader after timeout
+        setTimeout(() => setIsLoading(false), 3000);
+      }
     };
 
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting) {
-          entry.target.style.opacity = "1";
-          entry.target.style.transform = "translateY(0)";
+    loadResources();
+  }, []);
+
+  // Intersection Observer for smooth animations
+  useEffect(() => {
+    if (isLoading) return; // Don't set up animations until loading is complete
+
+    // Small delay to ensure DOM is ready after loading
+    const setupAnimations = () => {
+      const observerOptions = {
+        threshold: 0.1,
+        rootMargin: "0px 0px -50px 0px",
+      };
+
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.style.opacity = "1";
+            entry.target.style.transform = "translateY(0)";
+          }
+        });
+      }, observerOptions);
+
+      const elements = [heroRef, problemRef, processRef, exampleRef, ctaRef];
+
+      // Set initial styles first
+      elements.forEach((ref) => {
+        if (ref.current) {
+          ref.current.style.opacity = "0";
+          ref.current.style.transform = "translateY(30px)";
+          ref.current.style.transition =
+            "opacity 0.8s ease, transform 0.8s ease";
         }
       });
-    }, observerOptions);
 
-    const elements = [heroRef, problemRef, processRef, exampleRef, ctaRef];
-    elements.forEach((ref) => {
-      if (ref.current) {
-        ref.current.style.opacity = "0";
-        ref.current.style.transform = "translateY(30px)";
-        ref.current.style.transition = "opacity 0.8s ease, transform 0.8s ease";
-        observer.observe(ref.current);
-      }
-    });
+      // Then start observing with a slight delay to ensure styles are applied
+      setTimeout(() => {
+        elements.forEach((ref) => {
+          if (ref.current) {
+            observer.observe(ref.current);
+          }
+        });
+      }, 100);
 
-    return () => observer.disconnect();
-  }, []);
+      return observer;
+    };
+
+    const observer = setupAnimations();
+    return () => observer?.disconnect();
+  }, [isLoading]);
 
   const validateEmail = (email) => {
     const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return regex.test(email);
   };
+
+  // Show loading screen while resources are loading
+  if (isLoading) {
+    return <FullPageLogoLoader />;
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault();
