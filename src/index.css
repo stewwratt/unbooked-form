@@ -20,30 +20,6 @@ code {
     monospace;
 }
 
-/* Transition classes */
-.fade-enter {
-  opacity: 0;
-}
-.fade-enter-active {
-  opacity: 1;
-  transition: opacity 500ms ease-in-out;
-}
-.fade-exit {
-  opacity: 1;
-}
-.fade-exit-active {
-  opacity: 0;
-  transition: opacity 500ms ease-in-out;
-}
-
-/* Layout Styles */
-.main-container {
-  display: flex;
-  min-height: 100vh;
-}
-
-/* index.css */
-
 /* Transition classes for CSSTransition */
 .fade-enter {
   opacity: 0;
@@ -69,11 +45,16 @@ code {
 /* Desktop: video on left, content on right */
 @media (min-width: 601px) {
   .video-container {
+    position: fixed;
+    top: 0;
+    left: 0;
     width: 300px; /* adjust as needed */
     height: 100vh;
     overflow: hidden;
+    z-index: 1;
   }
-  .video-container video {
+  .video-container video,
+  .video-container img {
     width: 100%;
     height: 100%;
     object-fit: cover;
@@ -85,6 +66,7 @@ code {
     justify-content: center;
     align-items: center;
     padding: 20px;
+    margin-left: 300px; /* Account for fixed video width */
   }
 }
 
