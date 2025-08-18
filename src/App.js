@@ -1,9 +1,10 @@
-import React, { useState, useRef } from 'react';
-import { CSSTransition, SwitchTransition } from 'react-transition-group';
-import Logo from './Logo';
-import PhoneInput from './PhoneInput';
-import './FormRedesign.module.css'; // Only for marble background, not for layout
-import './App.css'; // For pulse animation
+import React, { useState, useRef, useEffect } from "react";
+import { CSSTransition, SwitchTransition } from "react-transition-group";
+import Logo from "./Logo";
+import PhoneInput from "./PhoneInput";
+import { FullPageLogoLoader, CenteredLogoLoader } from "./LogoLoading";
+import "./FormRedesign.module.css"; // Only for marble background, not for layout
+import "./App.css"; // For pulse animation
 
 function App() {
   const [step, setStep] = useState(1);
@@ -11,24 +12,54 @@ function App() {
   const [emailError, setEmailError] = useState(false);
   const [priceError, setPriceError] = useState(false);
   const [volumeError, setVolumeError] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isTransitioning, setIsTransitioning] = useState(false);
 
   const [formData, setFormData] = useState({
-    email: '',
-    currentPrice: '', // Changed from 50 to empty string
-    weeklyVolume: '', // Changed from 50 to empty string
+    email: "",
+    currentPrice: "", // Changed from 50 to empty string
+    weeklyVolume: "", // Changed from 50 to empty string
     priceIncrease: 10, // Keep this as number since it's slider-controlled
     retention: 90, // NEW: Predicted retention percentage
-    mobile: { countryCode: '+61', phoneNumber: '' },
-    clientOrSP: '',
-    currentSystem: '',
-    currentChallenges: '',
+    mobile: { countryCode: "+61", phoneNumber: "" },
+    clientOrSP: "",
+    currentSystem: "",
+    currentChallenges: "",
     dynamicBookingAppeal: 5,
-    revenueSharing: '',
-    desiredFeatures: ''
+    revenueSharing: "",
+    desiredFeatures: "",
   });
 
   const totalSteps = 10; // Updated from 9 to 10
   const nodeRef = useRef(null);
+
+  // Loading effect for network resources
+  useEffect(() => {
+    const loadResources = async () => {
+      try {
+        // Wait for page to load
+        if (document.readyState === "complete") {
+          // Add a minimum loading time to show the logo
+          await new Promise((resolve) => setTimeout(resolve, 1500));
+          setIsLoading(false);
+        } else {
+          // Wait for window load event
+          const handleLoad = async () => {
+            await new Promise((resolve) => setTimeout(resolve, 1500));
+            setIsLoading(false);
+          };
+          window.addEventListener("load", handleLoad);
+          return () => window.removeEventListener("load", handleLoad);
+        }
+      } catch (error) {
+        console.error("Error loading resources:", error);
+        // Still hide loader after timeout
+        setTimeout(() => setIsLoading(false), 3000);
+      }
+    };
+
+    loadResources();
+  }, []);
 
   // Revenue calculation functions - make them more reliable
   const calculateCurrentAnnual = () => {
@@ -61,7 +92,7 @@ function App() {
   const predictRetention = (priceIncrease, currentPrice) => {
     if (!currentPrice || currentPrice <= 0) return 90; // Default if no price set
     const increasePercentage = (priceIncrease / currentPrice) * 100;
-    return Math.max(80, 100 - (increasePercentage * 0.6));
+    return Math.max(80, 100 - increasePercentage * 0.6);
   };
 
   // Validators
@@ -72,7 +103,7 @@ function App() {
 
   // Valid if phone number contains at least 8 digits (ignoring non-digits)
   const validatePhone = (phoneNumber) => {
-    const digits = phoneNumber.replace(/\D/g, '');
+    const digits = phoneNumber.replace(/\D/g, "");
     return digits.length >= 8;
   };
 
@@ -110,9 +141,15 @@ function App() {
       stepCompleted: stepCompleted,
       timestamp: new Date().toISOString(),
       // Convert strings to numbers for Airtable compatibility
-      currentPrice: formData.currentPrice ? parseFloat(formData.currentPrice) : null,
-      weeklyVolume: formData.weeklyVolume ? parseFloat(formData.weeklyVolume) : null,
-      priceIncrease: formData.priceIncrease ? parseFloat(formData.priceIncrease) : null,
+      currentPrice: formData.currentPrice
+        ? parseFloat(formData.currentPrice)
+        : null,
+      weeklyVolume: formData.weeklyVolume
+        ? parseFloat(formData.weeklyVolume)
+        : null,
+      priceIncrease: formData.priceIncrease
+        ? parseFloat(formData.priceIncrease)
+        : null,
       retention: formData.retention ? parseFloat(formData.retention) : null,
       // Include calculations only if we have valid data
       currentAnnual: currentAnnual > 0 ? currentAnnual : null,
@@ -125,7 +162,7 @@ function App() {
       currentChallenges: formData.currentChallenges || null,
       dynamicBookingAppeal: formData.dynamicBookingAppeal || null,
       revenueSharing: formData.revenueSharing || null,
-      desiredFeatures: formData.desiredFeatures || null
+      desiredFeatures: formData.desiredFeatures || null,
     };
 
     // console.log('📤 Sending payload:', payload);
@@ -136,7 +173,7 @@ function App() {
     //   retention: parseFloat(formData.retention) || 90,
     //   currentAnnual,
     //   newAnnual,
-    //   uplift 
+    //   uplift
     // });
 
     // Add explicit timing and error handling
@@ -174,8 +211,10 @@ function App() {
         // console.log('✅ Progressive submission successful for step', stepCompleted);
 
         // Check if there were Airtable update issues
-        if (responseData.operation === 'update_failed_but_continuing' ||
-          responseData.operation === 'create_failed_but_continuing') {
+        if (
+          responseData.operation === "update_failed_but_continuing" ||
+          responseData.operation === "create_failed_but_continuing"
+        ) {
           // console.warn('⚠️ Airtable operation failed but continuing:', responseData.operation);
           // console.warn('⚠️ Airtable error details:', responseData.error);
           // console.warn('⚠️ Record ID:', responseData.recordId);
@@ -192,73 +231,78 @@ function App() {
     }
   };
 
-  const handleNext = () => {
-    // console.log(`=== HANDLE NEXT - Step ${step} ===`); // Debug log
+  const handleNext = async () => {
+    // Show transition loading
+    setIsTransitioning(true);
 
-    if (step === 1) {
-      if (!validateEmail(formData.email)) {
-        setEmailError(true);
-        return;
+    try {
+      if (step === 1) {
+        if (!validateEmail(formData.email)) {
+          setEmailError(true);
+          setIsTransitioning(false);
+          return;
+        }
+        // Submit email immediately after validation
+        await submitProgressiveData(1);
       }
-      // console.log('Step 1: Email validated, submitting progressive data'); // Debug
-      // Submit email immediately after validation
-      submitProgressiveData(1);
-    }
 
-    if (step === 2) {
-      const price = parseFloat(formData.currentPrice);
-      if (!price || price <= 0) {
-        setPriceError(true);
-        return;
+      if (step === 2) {
+        const price = parseFloat(formData.currentPrice);
+        if (!price || price <= 0) {
+          setPriceError(true);
+          setIsTransitioning(false);
+          return;
+        }
+        // Submit price data
+        await submitProgressiveData(2);
       }
-      // console.log('Step 2: Price validated, submitting progressive data'); // Debug
-      // Submit price data
-      submitProgressiveData(2);
-    }
 
-    if (step === 3) {
-      const volume = parseFloat(formData.weeklyVolume);
-      if (!volume || volume <= 0) {
-        setVolumeError(true);
-        return;
+      if (step === 3) {
+        const volume = parseFloat(formData.weeklyVolume);
+        if (!volume || volume <= 0) {
+          setVolumeError(true);
+          setIsTransitioning(false);
+          return;
+        }
+        // Submit volume data
+        await submitProgressiveData(3);
       }
-      // console.log('Step 3: Volume validated, submitting progressive data'); // Debug
-      // Submit volume data
-      submitProgressiveData(3);
-    }
 
-    if (step === 4) {
-      // console.log('Step 4: Submitting price increase data'); // Debug
-      submitProgressiveData(4); // After price increase
-    }
-
-    if (step === 5) {
-      // console.log('Step 5: Submitting results data'); // Debug
-      submitProgressiveData(5); // After results view
-    }
-
-    if (step === 6) { // Mobile is now step 6
-      if (!validatePhone(formData.mobile.phoneNumber)) {
-        setPhoneError(true);
-        return;
+      if (step === 4) {
+        await submitProgressiveData(4); // After price increase
       }
-      // console.log('Step 6: Phone validated, submitting progressive data'); // Debug
-      // Submit mobile data
-      submitProgressiveData(6);
-    }
 
-    if (step === 7) {
-      // console.log('Step 7: Submitting client/SP data'); // Debug
-      submitProgressiveData(7);
-    }
+      if (step === 5) {
+        await submitProgressiveData(5); // After results view
+      }
 
-    if (step === 8) {
-      // console.log('Step 8: Submitting current system data'); // Debug
-      submitProgressiveData(8);
-    }
+      if (step === 6) {
+        // Mobile is now step 6
+        if (!validatePhone(formData.mobile.phoneNumber)) {
+          setPhoneError(true);
+          setIsTransitioning(false);
+          return;
+        }
+        // Submit mobile data
+        await submitProgressiveData(6);
+      }
 
-    // console.log(`Advancing from step ${step} to ${step + 1}`); // Debug
-    if (step < totalSteps) setStep(step + 1);
+      if (step === 7) {
+        await submitProgressiveData(7);
+      }
+
+      if (step === 8) {
+        await submitProgressiveData(8);
+      }
+
+      // Add a small delay for smooth transition
+      await new Promise((resolve) => setTimeout(resolve, 300));
+
+      // Advance to next step
+      if (step < totalSteps) setStep(step + 1);
+    } finally {
+      setIsTransitioning(false);
+    }
   };
 
   const handlePrev = () => {
@@ -266,11 +310,13 @@ function App() {
   };
 
   const handleKeyDown = (e) => {
-    if (e.key === 'Enter') {
+    if (e.key === "Enter") {
       e.preventDefault();
-      if (step < 9) { // Updated from 8 to 9
+      if (step < 9) {
+        // Updated from 8 to 9
         handleNext();
-      } else if (step === 9) { // Updated from 8 to 9
+      } else if (step === 9) {
+        // Updated from 8 to 9
         submitForm();
       }
     }
@@ -280,10 +326,10 @@ function App() {
   const handlePriceIncreaseChange = (newIncrease) => {
     const currentPrice = parseFloat(formData.currentPrice) || 0;
     const predictedRetention = predictRetention(newIncrease, currentPrice);
-    setFormData(prevData => ({
+    setFormData((prevData) => ({
       ...prevData,
       priceIncrease: newIncrease,
-      retention: Math.round(predictedRetention)
+      retention: Math.round(predictedRetention),
     }));
   };
 
@@ -309,7 +355,7 @@ function App() {
 
     const payload = {
       email: formData.email,
-      stepCompleted: 'final',
+      stepCompleted: "final",
       timestamp: new Date().toISOString(),
       currentPrice: formData.currentPrice,
       weeklyVolume: formData.weeklyVolume,
@@ -329,14 +375,14 @@ function App() {
 
     try {
       // console.log('Submitting final form data:', payload); // Temporary for debugging
-      // console.log('Final calculation details:', { 
-      //   price, 
-      //   volume, 
-      //   priceIncrease, 
-      //   retention, 
-      //   currentAnnual, 
-      //   newAnnual, 
-      //   uplift 
+      // console.log('Final calculation details:', {
+      //   price,
+      //   volume,
+      //   priceIncrease,
+      //   retention,
+      //   currentAnnual,
+      //   newAnnual,
+      //   uplift
       // }); // Additional debugging
       await fetch(
         "https://airtable-proxy.joshuastewart-2810.workers.dev/api/airtable",
@@ -426,7 +472,7 @@ function App() {
     appearance: "none",
     position: "relative",
     // Create larger invisible hit area with pseudo-elements
-    boxSizing: "border-box"
+    boxSizing: "border-box",
   };
 
   // Slider thumb styles for blue color
@@ -475,128 +521,180 @@ function App() {
       case 1:
         return (
           <div style={stepContainerStyle}>
-            <div style={{ ...stepTitleStyle, fontSize: "1.4rem", marginBottom: "35px" }}>
+            <div
+              style={{
+                ...stepTitleStyle,
+                fontSize: "1.4rem",
+                marginBottom: "35px",
+              }}
+            >
               Discover Your Revenue Potential
             </div>
 
             {/* Hero Statement */}
-            <div style={{
-              backgroundColor: "#f8f9fa",
-              padding: "25px",
-              borderRadius: "8px",
-              marginBottom: "30px",
-              border: "2px solid #e3f2fd"
-            }}>
-              <div style={{
-                fontSize: "1.1rem",
-                fontWeight: "600",
-                color: "#5e8bf4",
-                marginBottom: "15px",
-                textAlign: "center"
-              }}>
+            <div
+              style={{
+                backgroundColor: "#f8f9fa",
+                padding: "25px",
+                borderRadius: "8px",
+                marginBottom: "30px",
+                border: "2px solid #e3f2fd",
+              }}
+            >
+              <div
+                style={{
+                  fontSize: "1.1rem",
+                  fontWeight: "600",
+                  color: "#5e8bf4",
+                  marginBottom: "15px",
+                  textAlign: "center",
+                }}
+              >
                 See exactly how much extra revenue you could generate
               </div>
-              <div style={{
-                fontSize: "0.95rem",
-                color: "#333",
-                textAlign: "center",
-                lineHeight: "1.5"
-              }}>
-                Our calculator reveals your financial impact in <strong>under 60 seconds</strong>
+              <div
+                style={{
+                  fontSize: "0.95rem",
+                  color: "#333",
+                  textAlign: "center",
+                  lineHeight: "1.5",
+                }}
+              >
+                Our calculator reveals your financial impact in{" "}
+                <strong>under 60 seconds</strong>
               </div>
             </div>
 
             {/* Unbooked Philosophy */}
-            <div style={{ marginBottom: "25px", fontSize: "0.95rem", color: "#555", lineHeight: "1.6" }}>
+            <div
+              style={{
+                marginBottom: "25px",
+                fontSize: "0.95rem",
+                color: "#555",
+                lineHeight: "1.6",
+              }}
+            >
               <p style={{ marginBottom: "20px" }}>
-                <strong>Unbooked's mission:</strong> Help service providers be recognised for what they're worth.
-                We believe your time, expertise, and craft deserve premium pricing and we've built the tools to make that reality.
+                <strong>Unbooked's mission:</strong> Help service providers be
+                recognised for what they're worth. We believe your time,
+                expertise, and craft deserve premium pricing and we've built the
+                tools to make that reality.
               </p>
             </div>
 
             {/* Value Propositions */}
             <div style={{ marginBottom: "30px" }}>
-              <div style={{
-                display: "grid",
-                gap: "15px",
-                marginBottom: "25px"
-              }}>
-                <div style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "12px",
-                  fontSize: "0.95rem"
-                }}>
-                  <div style={{
-                    width: "6px",
-                    height: "6px",
-                    backgroundColor: "#5e8bf4",
-                    borderRadius: "50%",
-                    flexShrink: 0
-                  }}></div>
-                  <span><strong>Strategic pricing insights</strong> - Find your optimal price point</span>
+              <div
+                style={{
+                  display: "grid",
+                  gap: "15px",
+                  marginBottom: "25px",
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "12px",
+                    fontSize: "0.95rem",
+                  }}
+                >
+                  <div
+                    style={{
+                      width: "6px",
+                      height: "6px",
+                      backgroundColor: "#5e8bf4",
+                      borderRadius: "50%",
+                      flexShrink: 0,
+                    }}
+                  ></div>
+                  <span>
+                    <strong>Strategic pricing insights</strong> - Find your
+                    optimal price point
+                  </span>
                 </div>
-                <div style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "12px",
-                  fontSize: "0.95rem"
-                }}>
-                  <div style={{
-                    width: "6px",
-                    height: "6px",
-                    backgroundColor: "#5e8bf4",
-                    borderRadius: "50%",
-                    flexShrink: 0
-                  }}></div>
-                  <span><strong>Revenue projections</strong> - See your annual uplift potential</span>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "12px",
+                    fontSize: "0.95rem",
+                  }}
+                >
+                  <div
+                    style={{
+                      width: "6px",
+                      height: "6px",
+                      backgroundColor: "#5e8bf4",
+                      borderRadius: "50%",
+                      flexShrink: 0,
+                    }}
+                  ></div>
+                  <span>
+                    <strong>Revenue projections</strong> - See your annual
+                    uplift potential
+                  </span>
                 </div>
-                <div style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "12px",
-                  fontSize: "0.95rem"
-                }}>
-                  <div style={{
-                    width: "6px",
-                    height: "6px",
-                    backgroundColor: "#61baff",
-                    borderRadius: "50%",
-                    flexShrink: 0
-                  }}></div>
-                  <span><strong>Pilot program access</strong> - Join our exclusive early adopter community with priority onboarding, advanced features, and direct founder access</span>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "12px",
+                    fontSize: "0.95rem",
+                  }}
+                >
+                  <div
+                    style={{
+                      width: "6px",
+                      height: "6px",
+                      backgroundColor: "#61baff",
+                      borderRadius: "50%",
+                      flexShrink: 0,
+                    }}
+                  ></div>
+                  <span>
+                    <strong>Pilot program access</strong> - Join our exclusive
+                    early adopter community with priority onboarding, advanced
+                    features, and direct founder access
+                  </span>
                 </div>
               </div>
             </div>
 
             {/* CTA Section */}
-            <div style={{
-              backgroundColor: "#fff",
-              padding: "20px",
-              borderRadius: "6px",
-              marginBottom: "25px",
-              border: "1px solid #ddd",
-              position: "relative",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: "10px"
-            }}>
+            <div
+              style={{
+                backgroundColor: "#fff",
+                padding: "20px",
+                borderRadius: "6px",
+                marginBottom: "25px",
+                border: "1px solid #ddd",
+                position: "relative",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "10px",
+              }}
+            >
               {/* Pulsing blue dot */}
-              <div style={{
-                width: "8px",
-                height: "8px",
-                backgroundColor: "#5e8bf4",
-                borderRadius: "50%",
-                animation: "pulse 2s infinite ease-in-out",
-                flexShrink: 0
-              }}></div>
-              <div style={{
-                fontSize: "0.9rem",
-                color: "#333",
-                textAlign: "center",
-                fontWeight: "500"
-              }}>
+              <div
+                style={{
+                  width: "8px",
+                  height: "8px",
+                  backgroundColor: "#5e8bf4",
+                  borderRadius: "50%",
+                  animation: "pulse 2s infinite ease-in-out",
+                  flexShrink: 0,
+                }}
+              ></div>
+              <div
+                style={{
+                  fontSize: "0.9rem",
+                  color: "#333",
+                  textAlign: "center",
+                  fontWeight: "500",
+                }}
+              >
                 Enter your email to unlock your personalised revenue calculator
               </div>
             </div>
@@ -618,19 +716,23 @@ function App() {
                 fontSize: "1.1rem",
                 padding: "18px 0px",
                 maxWidth: "100%",
-                width: "100%"
+                width: "100%",
               }}
               required
             />
             <div style={buttonRowStyle}>
-              <button type="button" onClick={handleNext} style={{
-                ...buttonStyle,
-                background: "linear-gradient(135deg, #5e8bf4, #61baff)",
-                fontSize: "1rem",
-                fontWeight: "600",
-                padding: "12px 20px",
-                border: "none"
-              }}>
+              <button
+                type="button"
+                onClick={handleNext}
+                style={{
+                  ...buttonStyle,
+                  background: "linear-gradient(135deg, #5e8bf4, #61baff)",
+                  fontSize: "1rem",
+                  fontWeight: "600",
+                  padding: "12px 20px",
+                  border: "none",
+                }}
+              >
                 Calculate My Revenue Potential
               </button>
             </div>
@@ -639,7 +741,9 @@ function App() {
       case 2:
         return (
           <div style={stepContainerStyle}>
-            <div style={stepTitleStyle}>2. How much do you charge on average per service?</div>
+            <div style={stepTitleStyle}>
+              2. How much do you charge on average per service?
+            </div>
             <div style={{ marginBottom: "20px" }}>
               <input
                 type="number"
@@ -659,20 +763,31 @@ function App() {
                   padding: "18px 0",
                   transition: "border-bottom-color 0.2s ease",
                   borderRadius: "0",
-                  borderBottomColor: priceError ? "red" : "#aaa"
+                  borderBottomColor: priceError ? "red" : "#aaa",
                 }}
                 min="1"
                 max="1000"
                 onFocus={(e) => {
-                  e.target.style.borderBottomColor = priceError ? "red" : "#5e8bf4";
+                  e.target.style.borderBottomColor = priceError
+                    ? "red"
+                    : "#5e8bf4";
                   e.target.style.borderRadius = "0";
                 }}
                 onBlur={(e) => {
-                  e.target.style.borderBottomColor = priceError ? "red" : "#aaa";
+                  e.target.style.borderBottomColor = priceError
+                    ? "red"
+                    : "#aaa";
                   e.target.style.borderRadius = "0";
                 }}
               />
-              <div style={{ fontSize: "0.9rem", color: "#666", marginTop: "-30px", textAlign: "center" }}>
+              <div
+                style={{
+                  fontSize: "0.9rem",
+                  color: "#666",
+                  marginTop: "-30px",
+                  textAlign: "center",
+                }}
+              >
                 Average price per haircut/service ($)
               </div>
             </div>
@@ -693,7 +808,9 @@ function App() {
       case 3:
         return (
           <div style={stepContainerStyle}>
-            <div style={stepTitleStyle}>3. How many clients on average do you see per week?</div>
+            <div style={stepTitleStyle}>
+              3. How many clients on average do you see per week?
+            </div>
             <div style={{ marginBottom: "20px" }}>
               <input
                 type="number"
@@ -713,20 +830,31 @@ function App() {
                   padding: "16px 0",
                   transition: "border-bottom-color 0.2s ease",
                   borderRadius: "0",
-                  borderBottomColor: volumeError ? "red" : "#aaa"
+                  borderBottomColor: volumeError ? "red" : "#aaa",
                 }}
                 min="1"
                 max="200"
                 onFocus={(e) => {
-                  e.target.style.borderBottomColor = volumeError ? "red" : "#5e8bf4";
+                  e.target.style.borderBottomColor = volumeError
+                    ? "red"
+                    : "#5e8bf4";
                   e.target.style.borderRadius = "0";
                 }}
                 onBlur={(e) => {
-                  e.target.style.borderBottomColor = volumeError ? "red" : "#aaa";
+                  e.target.style.borderBottomColor = volumeError
+                    ? "red"
+                    : "#aaa";
                   e.target.style.borderRadius = "0";
                 }}
               />
-              <div style={{ fontSize: "0.9rem", color: "#666", marginTop: "-30px", textAlign: "center" }}>
+              <div
+                style={{
+                  fontSize: "0.9rem",
+                  color: "#666",
+                  marginTop: "-30px",
+                  textAlign: "center",
+                }}
+              >
                 Average number of clients per week
               </div>
             </div>
@@ -747,7 +875,9 @@ function App() {
       case 4:
         return (
           <div style={stepContainerStyle}>
-            <div style={stepTitleStyle}>4. What if you increased your price?</div>
+            <div style={stepTitleStyle}>
+              4. What if you increased your price?
+            </div>
             <style dangerouslySetInnerHTML={{ __html: sliderThumbStyle }} />
             <div style={{ marginBottom: "30px" }}>
               <div style={{ marginBottom: "15px" }}>
@@ -759,16 +889,29 @@ function App() {
                   min="5"
                   max="50"
                   value={formData.priceIncrease}
-                  onChange={(e) => handlePriceIncreaseChange(Number(e.target.value))}
+                  onChange={(e) =>
+                    handlePriceIncreaseChange(Number(e.target.value))
+                  }
                   style={sliderStyle}
                 />
               </div>
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8rem", color: "#666" }}>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  fontSize: "0.8rem",
+                  color: "#666",
+                }}
+              >
                 <span>$5</span>
                 <span>$50</span>
               </div>
-              <div style={{ marginTop: "20px", fontSize: "0.9rem", color: "#666" }}>
-                New price: ${(Number(formData.currentPrice) || 0) + formData.priceIncrease} per service
+              <div
+                style={{ marginTop: "20px", fontSize: "0.9rem", color: "#666" }}
+              >
+                New price: $
+                {(Number(formData.currentPrice) || 0) + formData.priceIncrease}{" "}
+                per service
               </div>
             </div>
             <div style={buttonRowStyle}>
@@ -779,11 +922,15 @@ function App() {
               >
                 Previous
               </button>
-              <button type="button" onClick={handleNext} style={{
-                ...buttonStyle,
-                background: "linear-gradient(135deg, #5e8bf4, #61baff)",
-                border: "none"
-              }}>
+              <button
+                type="button"
+                onClick={handleNext}
+                style={{
+                  ...buttonStyle,
+                  background: "linear-gradient(135deg, #5e8bf4, #61baff)",
+                  border: "none",
+                }}
+              >
                 See Results
               </button>
             </div>
@@ -794,44 +941,103 @@ function App() {
           <div style={stepContainerStyle}>
             <div style={stepTitleStyle}>5. Your Revenue Potential</div>
             <style dangerouslySetInnerHTML={{ __html: sliderThumbStyle }} />
-            <div style={{
-              backgroundColor: "#f8f9fa",
-              padding: "30px",
-              borderRadius: "8px",
-              marginBottom: "30px",
-              border: "1px solid #e9ecef"
-            }}>
+            <div
+              style={{
+                backgroundColor: "#f8f9fa",
+                padding: "30px",
+                borderRadius: "8px",
+                marginBottom: "30px",
+                border: "1px solid #e9ecef",
+              }}
+            >
               <div style={{ marginBottom: "20px" }}>
-                <div style={{ fontSize: "0.9rem", color: "#666", marginBottom: "5px" }}>Current Annual Revenue</div>
-                <div style={{ fontSize: "1.8rem", fontWeight: "bold", color: "#333" }}>
+                <div
+                  style={{
+                    fontSize: "0.9rem",
+                    color: "#666",
+                    marginBottom: "5px",
+                  }}
+                >
+                  Current Annual Revenue
+                </div>
+                <div
+                  style={{
+                    fontSize: "1.8rem",
+                    fontWeight: "bold",
+                    color: "#333",
+                  }}
+                >
                   ${calculateCurrentAnnual().toLocaleString()}
                 </div>
               </div>
               <div style={{ marginBottom: "20px" }}>
-                <div style={{ fontSize: "0.9rem", color: "#666", marginBottom: "5px" }}>Projected Annual Revenue</div>
-                <div style={{ fontSize: "1.8rem", fontWeight: "bold", color: "#28a745" }}>
+                <div
+                  style={{
+                    fontSize: "0.9rem",
+                    color: "#666",
+                    marginBottom: "5px",
+                  }}
+                >
+                  Projected Annual Revenue
+                </div>
+                <div
+                  style={{
+                    fontSize: "1.8rem",
+                    fontWeight: "bold",
+                    color: "#28a745",
+                  }}
+                >
                   ${calculateNewAnnual().toLocaleString()}
                 </div>
               </div>
               <div style={{ marginBottom: "20px" }}>
-                <div style={{ fontSize: "0.9rem", color: "#666", marginBottom: "5px" }}>Annual Uplift</div>
-                <div style={{ fontSize: "2.2rem", fontWeight: "bold", color: "#007bff" }}>
+                <div
+                  style={{
+                    fontSize: "0.9rem",
+                    color: "#666",
+                    marginBottom: "5px",
+                  }}
+                >
+                  Annual Uplift
+                </div>
+                <div
+                  style={{
+                    fontSize: "2.2rem",
+                    fontWeight: "bold",
+                    color: "#007bff",
+                  }}
+                >
                   +${calculateUplift().toLocaleString()}
                 </div>
                 {/* Minimal weekly breakdown */}
-                <div style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  marginTop: "8px",
-                  fontSize: "0.85rem",
-                  color: "#666"
-                }}>
-                  +${Math.round(calculateUplift() / 52).toLocaleString()} per week
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    marginTop: "8px",
+                    fontSize: "0.85rem",
+                    color: "#666",
+                  }}
+                >
+                  +${Math.round(calculateUplift() / 52).toLocaleString()} per
+                  week
                 </div>
               </div>
-              <div style={{ marginTop: "25px", paddingTop: "20px", borderTop: "1px solid #dee2e6" }}>
-                <div style={{ fontSize: "0.9rem", color: "#666", marginBottom: "10px" }}>
+              <div
+                style={{
+                  marginTop: "25px",
+                  paddingTop: "20px",
+                  borderTop: "1px solid #dee2e6",
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: "0.9rem",
+                    color: "#666",
+                    marginBottom: "10px",
+                  }}
+                >
                   Predicted Client Retention: {formData.retention}%
                 </div>
                 <div style={{ position: "relative", padding: "10px 0" }}>
@@ -840,14 +1046,23 @@ function App() {
                     min="70"
                     max="100"
                     value={formData.retention}
-                    onChange={(e) => setFormData(prevData => ({
-                      ...prevData,
-                      retention: Number(e.target.value)
-                    }))}
+                    onChange={(e) =>
+                      setFormData((prevData) => ({
+                        ...prevData,
+                        retention: Number(e.target.value),
+                      }))
+                    }
                     style={sliderStyle}
                   />
                 </div>
-                <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8rem", color: "#666" }}>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    fontSize: "0.8rem",
+                    color: "#666",
+                  }}
+                >
                   <span>70%</span>
                   <span>100%</span>
                 </div>
@@ -870,19 +1085,40 @@ function App() {
       case 6:
         return (
           <div style={stepContainerStyle}>
-            <div style={stepTitleStyle}>6. See if you qualify for our Unbooked pilot program</div>
-            <div style={{ marginBottom: "20px", fontSize: "0.95rem", color: "#555", lineHeight: "1.5" }}>
+            <div style={stepTitleStyle}>
+              6. See if you qualify for our Unbooked pilot program
+            </div>
+            <div
+              style={{
+                marginBottom: "20px",
+                fontSize: "0.95rem",
+                color: "#555",
+                lineHeight: "1.5",
+              }}
+            >
               <p style={{ marginBottom: "15px" }}>
-                Based on your revenue potential, you may qualify for early access to our pilot program.
+                Based on your revenue potential, you may qualify for early
+                access to our pilot program.
               </p>
               <p style={{ marginBottom: "15px" }}>
-                <strong>Unbooked is a revolutionary booking system under active development</strong> designed to help service providers like you be recognised for what you're worth. Our platform uses dynamic pricing, smart scheduling, and client insights to maximise your revenue while reducing no-shows.
+                <strong>
+                  Unbooked is a revolutionary booking system under active
+                  development
+                </strong>{" "}
+                designed to help service providers like you be recognised for
+                what you're worth. Our platform uses dynamic pricing, smart
+                scheduling, and client insights to maximise your revenue while
+                reducing no-shows.
               </p>
               <p style={{ marginBottom: "15px" }}>
-                <strong>Pilot program includes:</strong> Early access to our booking platform, advanced dynamic pricing tools, priority support, exclusive community access, and direct collaboration with our founding team.
+                <strong>Pilot program includes:</strong> Early access to our
+                booking platform, advanced dynamic pricing tools, priority
+                support, exclusive community access, and direct collaboration
+                with our founding team.
               </p>
               <p style={{ marginBottom: "0" }}>
-                Enter your mobile number to check your eligibility and secure your spot in shaping the future of service booking.
+                Enter your mobile number to check your eligibility and secure
+                your spot in shaping the future of service booking.
               </p>
             </div>
             <div style={{ marginBottom: "40px" }}>
@@ -908,11 +1144,15 @@ function App() {
               >
                 Previous
               </button>
-              <button type="button" onClick={handleNext} style={{
-                ...buttonStyle,
-                background: "linear-gradient(135deg, #5e8bf4, #61baff)",
-                border: "none"
-              }}>
+              <button
+                type="button"
+                onClick={handleNext}
+                style={{
+                  ...buttonStyle,
+                  background: "linear-gradient(135deg, #5e8bf4, #61baff)",
+                  border: "none",
+                }}
+              >
                 Check Eligibility
               </button>
             </div>
@@ -929,8 +1169,12 @@ function App() {
                 <div
                   key={option}
                   style={{
-                    backgroundColor: formData.clientOrSP === option ? "#f0f7ff" : "#fff",
-                    border: formData.clientOrSP === option ? "2px solid #5e8bf4" : "2px solid #e9ecef",
+                    backgroundColor:
+                      formData.clientOrSP === option ? "#f0f7ff" : "#fff",
+                    border:
+                      formData.clientOrSP === option
+                        ? "2px solid #5e8bf4"
+                        : "2px solid #e9ecef",
                     borderRadius: "8px",
                     padding: "20px",
                     marginBottom: "12px",
@@ -939,9 +1183,11 @@ function App() {
                     position: "relative",
                     display: "flex",
                     alignItems: "center",
-                    gap: "15px"
+                    gap: "15px",
                   }}
-                  onClick={() => setFormData({ ...formData, clientOrSP: option })}
+                  onClick={() =>
+                    setFormData({ ...formData, clientOrSP: option })
+                  }
                   onMouseEnter={(e) => {
                     if (formData.clientOrSP !== option) {
                       e.target.style.borderColor = "#c1d7f0";
@@ -956,33 +1202,43 @@ function App() {
                   }}
                 >
                   {/* Custom radio button */}
-                  <div style={{
-                    width: "20px",
-                    height: "20px",
-                    borderRadius: "50%",
-                    border: "2px solid " + (formData.clientOrSP === option ? "#5e8bf4" : "#ccc"),
-                    backgroundColor: formData.clientOrSP === option ? "#5e8bf4" : "#fff",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    flexShrink: 0
-                  }}>
+                  <div
+                    style={{
+                      width: "20px",
+                      height: "20px",
+                      borderRadius: "50%",
+                      border:
+                        "2px solid " +
+                        (formData.clientOrSP === option ? "#5e8bf4" : "#ccc"),
+                      backgroundColor:
+                        formData.clientOrSP === option ? "#5e8bf4" : "#fff",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      flexShrink: 0,
+                    }}
+                  >
                     {formData.clientOrSP === option && (
-                      <div style={{
-                        width: "8px",
-                        height: "8px",
-                        borderRadius: "50%",
-                        backgroundColor: "#fff"
-                      }}></div>
+                      <div
+                        style={{
+                          width: "8px",
+                          height: "8px",
+                          borderRadius: "50%",
+                          backgroundColor: "#fff",
+                        }}
+                      ></div>
                     )}
                   </div>
 
                   {/* Option text */}
-                  <div style={{
-                    fontSize: "1rem",
-                    fontWeight: formData.clientOrSP === option ? "600" : "400",
-                    color: formData.clientOrSP === option ? "#333" : "#555"
-                  }}>
+                  <div
+                    style={{
+                      fontSize: "1rem",
+                      fontWeight:
+                        formData.clientOrSP === option ? "600" : "400",
+                      color: formData.clientOrSP === option ? "#333" : "#555",
+                    }}
+                  >
                     {option}
                   </div>
                 </div>
@@ -1019,7 +1275,7 @@ function App() {
               style={{
                 ...inputUnderlineStyle,
                 fontSize: "1.1rem",
-                padding: "18px 10px"
+                padding: "18px 10px",
               }}
             />
             <div style={buttonRowStyle}>
@@ -1053,7 +1309,7 @@ function App() {
               style={{
                 ...inputUnderlineStyle,
                 fontSize: "1.1rem",
-                padding: "18px 10px"
+                padding: "18px 10px",
               }}
             />
             <div style={buttonRowStyle}>
@@ -1064,11 +1320,14 @@ function App() {
               >
                 Previous
               </button>
-              <button type="submit" style={{
-                ...buttonStyle,
-                background: "linear-gradient(135deg, #5e8bf4, #61baff)",
-                border: "none"
-              }}>
+              <button
+                type="submit"
+                style={{
+                  ...buttonStyle,
+                  background: "linear-gradient(135deg, #5e8bf4, #61baff)",
+                  border: "none",
+                }}
+              >
                 Submit
               </button>
             </div>
@@ -1076,20 +1335,36 @@ function App() {
         );
       case 10:
         return (
-          <div style={{ margin: "0 auto", maxWidth: "600px", textAlign: "center" }}>
+          <div
+            style={{ margin: "0 auto", maxWidth: "600px", textAlign: "center" }}
+          >
             <h2>Thanks for joining the waiting list!</h2>
             <p>We appreciate your interest and will be in touch soon.</p>
-            <div style={{
-              backgroundColor: "#f8f9fa",
-              padding: "20px",
-              borderRadius: "8px",
-              marginTop: "20px",
-              marginBottom: "30px"
-            }}>
-              <div style={{ fontSize: "0.9rem", color: "#666", marginBottom: "10px" }}>
+            <div
+              style={{
+                backgroundColor: "#f8f9fa",
+                padding: "20px",
+                borderRadius: "8px",
+                marginTop: "20px",
+                marginBottom: "30px",
+              }}
+            >
+              <div
+                style={{
+                  fontSize: "0.9rem",
+                  color: "#666",
+                  marginBottom: "10px",
+                }}
+              >
                 Your potential annual revenue increase:
               </div>
-              <div style={{ fontSize: "1.5rem", fontWeight: "bold", color: "#007bff" }}>
+              <div
+                style={{
+                  fontSize: "1.5rem",
+                  fontWeight: "bold",
+                  color: "#007bff",
+                }}
+              >
                 +${calculateUplift().toLocaleString()}
               </div>
             </div>
@@ -1131,6 +1406,11 @@ function App() {
     }
   };
 
+  // Show loading screen while resources are loading
+  if (isLoading) {
+    return <FullPageLogoLoader />;
+  }
+
   return (
     <div className="main-container" style={{ width: "100%" }}>
       <div className="video-container">
@@ -1151,7 +1431,7 @@ function App() {
             backgroundColor: "#eee",
             borderRadius: "3px",
             marginTop: "30px",
-            marginBottom: "10px"
+            marginBottom: "10px",
           }}
         >
           <div style={progressBarFill} />
@@ -1165,7 +1445,30 @@ function App() {
             unmountOnExit
             mountOnEnter
           >
-            <div ref={nodeRef} className="card-container marble-panel" style={{ textAlign: "left" }}>
+            <div
+              ref={nodeRef}
+              className="card-container marble-panel"
+              style={{ textAlign: "left", position: "relative" }}
+            >
+              {isTransitioning && (
+                <div
+                  style={{
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    backgroundColor: "rgba(255, 255, 255, 0.9)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    zIndex: 10,
+                    borderRadius: "18px",
+                  }}
+                >
+                  <CenteredLogoLoader size="medium" />
+                </div>
+              )}
               {step < 10 ? (
                 <form onSubmit={handleSubmit}>{getStepContent()}</form>
               ) : (
@@ -1176,26 +1479,30 @@ function App() {
         </SwitchTransition>
 
         {/* Professional Footer */}
-        <div style={{
-          position: "fixed",
-          bottom: 0,
-          left: 0,
-          right: 0,
-          backgroundColor: "#fff",
-          borderTop: "1px solid #f0f0f0",
-          padding: "16px 0",
-          fontSize: "0.75rem",
-          color: "#888",
-          zIndex: 1000
-        }}>
-          <div style={{
-            maxWidth: "1200px",
-            margin: "0 auto",
-            padding: "0 20px",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center"
-          }}>
+        <div
+          style={{
+            position: "fixed",
+            bottom: 0,
+            left: 0,
+            right: 0,
+            backgroundColor: "#fff",
+            borderTop: "1px solid #f0f0f0",
+            padding: "16px 0",
+            fontSize: "0.75rem",
+            color: "#888",
+            zIndex: 1000,
+          }}
+        >
+          <div
+            style={{
+              maxWidth: "1200px",
+              margin: "0 auto",
+              padding: "0 20px",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+          >
             <div>© 2025 Unbooked</div>
             <div>
               Built by{" "}
@@ -1207,10 +1514,14 @@ function App() {
                   color: "#666",
                   textDecoration: "none",
                   borderBottom: "1px solid transparent",
-                  transition: "border-bottom-color 0.2s ease"
+                  transition: "border-bottom-color 0.2s ease",
                 }}
-                onMouseEnter={(e) => e.target.style.borderBottomColor = "#666"}
-                onMouseLeave={(e) => e.target.style.borderBottomColor = "transparent"}
+                onMouseEnter={(e) =>
+                  (e.target.style.borderBottomColor = "#666")
+                }
+                onMouseLeave={(e) =>
+                  (e.target.style.borderBottomColor = "transparent")
+                }
               >
                 Josh Stewart
               </a>
