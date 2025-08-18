@@ -364,7 +364,11 @@ function RegisterInterest() {
           {/* Hero Section */}
           <div
             ref={heroRef}
-            style={{ textAlign: "center", marginBottom: "60px" }}
+            className="hero-section"
+            style={{
+              textAlign: "center",
+              marginBottom: "60px",
+            }}
           >
             <h1
               style={{
